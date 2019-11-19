@@ -5,7 +5,6 @@ import java.awt.event.KeyListener;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseListener;
 import java.awt.event.MouseMotionListener;
-import java.awt.event.WindowEvent;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -13,16 +12,26 @@ import actors.Player;
 import game.UserControl;
 
 /**
- * The controller class for the GameWindow graphics class. This contains the code for all
- * of the events coming through the main GUI.
+ * The controller responsible for handling functionality for and input into the panel
+ * that renders active game sessions.
  */
-public class GameWindowController
+public class SessionPanelController
 	implements MouseListener, MouseMotionListener, KeyListener {
 	
 	/**
-	 * The GUI that this class is handling the event handling for.
+	 * The number of frames to attempt to render every second.
 	 */
-	private GameWindow parent;
+	private final static int FPS = 30;
+	
+	/**
+	 * The number of milliseconds each frame is ideally displayed for.
+	 */
+	private final static int FRAME_PERIOD_MS = 1000 / FPS;
+	
+	/**
+	 * The session panel that this controller is responsible for handling input from.
+	 */
+	private SessionPanel parent;
 	
 	/**
 	 * The atomic boolean that describes when the operation threads should be stopped.
@@ -35,17 +44,18 @@ public class GameWindowController
 	private Thread graphicsUpdateThread;
 	
 	/**
-	 * The directional keys that are being pressed at the moment.
+	 * The thread-safe map tracking the keys that are being pressed to manipulate the
+	 * player.
 	 */
 	private ConcurrentHashMap<UserControl, Boolean> keysPressed;
 	
 	/**
-	 * The sole constructor. Takes a {@link graphics.GameWindow} instance to own the
-	 * event handling for.
-	 * @param parent The {@link graphics.GameWindow} instance.
+	 * The sole constructor.
+	 * Initializes the variable members.
+	 * @param p The session panel that this controller is to be responsible for.
 	 */
-	public GameWindowController(GameWindow parent) {
-		this.parent = parent;
+	public SessionPanelController(SessionPanel p) {
+		this.parent = p;
 		
 		this.keepThreadsAlive = new AtomicBoolean();
 		
@@ -59,79 +69,54 @@ public class GameWindowController
 				while (keepThreadsAlive.get()) {
 					vx = 0;
 					vy = 0;
+					
+					if (keysPressed.get(UserControl.LEFT).booleanValue())
+						vx -= 1;
+					
+					if (keysPressed.get(UserControl.RIGHT).booleanValue())
+						vx += 1;
+					
+					if (keysPressed.get(UserControl.UP).booleanValue())
+						vy -= 1;
+					
+					if (keysPressed.get(UserControl.DOWN).booleanValue())
+						vy += 1;
+					
+					sprinting = keysPressed.get(UserControl.SPRINT).booleanValue();
+					
+					parent.getSession().getPlayer().updatePosition(FRAME_PERIOD_MS / 1000.0);
+					parent.getSession().getPlayer().setVelocity(
+						Math.atan2(vy, vx),
+						Math.sqrt((vx * vx) + (vy * vy)) * (sprinting ? Player.RUN_SPEED : Player.WALK_SPEED)
+					);
+					
+					parent.repaint();
+					
 					try {
-						if (keysPressed.get(UserControl.LEFT).booleanValue())
-							vx -= 1;
-						
-						if (keysPressed.get(UserControl.RIGHT).booleanValue())
-							vx += 1;
-						
-						if (keysPressed.get(UserControl.UP).booleanValue())
-							vy -= 1;
-						
-						if (keysPressed.get(UserControl.DOWN).booleanValue())
-							vy += 1;
-						
-						sprinting = keysPressed.get(UserControl.SPRINT).booleanValue();
-						
-						parent.getSession().getPlayer().updatePosition(0.017);
-						parent.getSession().getPlayer().setVelocity(
-							Math.atan2(vy, vx),
-							Math.sqrt((vx * vx) + (vy * vy)) * (sprinting ? Player.RUN_SPEED : Player.WALK_SPEED)
-						);
-						
-						parent.repaint();
-						
-						// Operate under ~60FPS
-						Thread.sleep(17);
+						Thread.sleep(FRAME_PERIOD_MS);
 					} catch (InterruptedException e) { e.printStackTrace(); }
 				}
 			}
 		});
 		
 		this.keysPressed = new ConcurrentHashMap<UserControl, Boolean>();
-		this.keysPressed.put(UserControl.LEFT, false);
-		this.keysPressed.put(UserControl.RIGHT, false);
-		this.keysPressed.put(UserControl.UP, false);
-		this.keysPressed.put(UserControl.DOWN, false);
-		this.keysPressed.put(UserControl.SPRINT, false);
-		
-		this.parent.addMouseListener(this);
-		this.parent.addMouseMotionListener(this);
-		this.parent.addKeyListener(this);
-		
-		if (this.keepThreadsAlive.compareAndSet(false, true)) {
-			this.graphicsUpdateThread.start();
-		} else {
-			throw new RuntimeException("Atomic flag failure.");
-		}
 	}
 	
 	/**
 	 * Override from KeyListener interface.
-	 * Handles keys being pressed on the parent {@link graphics.GameWindow}.
+	 * Handles keys being pressed on the parent {@link graphics.SessionPanel}.
 	 * @param e The key event to handle.
 	 */
 	@Override
 	public void keyPressed(KeyEvent e) {
-		int code = e.getKeyCode();
-		switch (code) {
-			case KeyEvent.VK_ESCAPE:
-				this.killSafely();
-				break;
-			
-			default:
-			{
-				UserControl c = UserControl.findByKey(code);
-				if (c != null)
-					this.keysPressed.put(c, true);
-			}
-		}
+		UserControl c = UserControl.findByKey(e.getKeyCode());
+		if (c != null)
+			this.keysPressed.put(c, true);
 	}
 
 	/**
 	 * Override from KeyListener interface.
-	 * Handles keys being released on the parent {@link graphics.GameWindow}.
+	 * Handles keys being released on the parent {@link graphics.SessionPanel}.
 	 * @param e The key event to handle.
 	 */
 	@Override
@@ -222,14 +207,34 @@ public class GameWindowController
 	}
 	
 	/**
-	 * Safely bring down active components of the application and close the parent {@link graphics.GameWindow}.
+	 * Try to start the main thread(s).
 	 */
-	public void killSafely() {
+	public void start() {
+		if (this.keepThreadsAlive.compareAndSet(false, true)) {
+			this.keysPressed.put(UserControl.LEFT, false);
+			this.keysPressed.put(UserControl.RIGHT, false);
+			this.keysPressed.put(UserControl.UP, false);
+			this.keysPressed.put(UserControl.DOWN, false);
+			this.keysPressed.put(UserControl.SPRINT, false);
+			this.graphicsUpdateThread.start();
+		} else {
+			throw new RuntimeException("Atomic flag failure.");
+		}
+	}
+	
+	/**
+	 * Try to safely (thread-safe) stop the main thread(s).
+	 * @return Whether or not the proper elements could be safely brought down.
+	 */
+	public boolean killSafely() {
 		if (this.keepThreadsAlive.compareAndSet(true, false)) {
 			try {
 				this.graphicsUpdateThread.join();
-			} catch (InterruptedException e) { e.printStackTrace(); }
-			this.parent.dispatchEvent(new WindowEvent(this.parent, WindowEvent.WINDOW_CLOSING));
+				return true;
+			} catch (InterruptedException e) {
+				e.printStackTrace();
+				return false;
+			}
 		} else {
 			throw new RuntimeException("Atomic flag failure.");
 		}

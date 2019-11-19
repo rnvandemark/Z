@@ -4,24 +4,14 @@ package actors;
  * A simple two-dimensional velocity representation, with required velocities in
  * the x and y axes.
  */
-public class Velocity {
-	
-	/**
-	 * The current velocity in the x-axis.
-	 */
-	public double x;
-	
-	/**
-	 * The current velocity in the y-axis.
-	 */
-	public double y;
+public class Velocity2D extends Kinematic2D {
 	
 	/**
 	 * The default constructor.
 	 * Defaults the x and y velocity each to 0.
 	 */
-	public Velocity() {
-		this(0.0, 0.0);
+	public Velocity2D() {
+		super(0.0, 0.0);
 	}
 	
 	/**
@@ -30,18 +20,8 @@ public class Velocity {
 	 * @param x The new velocity in the x-axis.
 	 * @param y The new velocity in the y-axis.
 	 */
-	public Velocity(double x, double y) {
-		this.set(x, y);
-	}
-	
-	/**
-	 * A simple set function, to set both the x and y velocities.
-	 * @param x The new x velocity.
-	 * @param y The new y velocity.
-	 */
-	public void set(double x, double y) {
-		this.x = x;
-		this.y = y;
+	public Velocity2D(double x, double y) {
+		super(x, y);
 	}
 	
 	/**
@@ -59,17 +39,9 @@ public class Velocity {
 	 * @param direction The direction of the vector, in radians.
 	 * @param magnitude The intensity of the velocity (the net speed).
 	 */
-	public static Velocity generateFromVector(double direction, double magnitude) {
-		Velocity v = new Velocity();
+	public static Velocity2D generateFromVector(double direction, double magnitude) {
+		Velocity2D v = new Velocity2D();
 		v.setFromVector(direction, magnitude);
 		return v;
-	}
-	
-	/**
-	 * Override from {@link java.lang.Object} method.
-	 */
-	@Override
-	public String toString() {
-		return String.format("x: %f, y: %f", this.x, this.y);
 	}
 }

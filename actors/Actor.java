@@ -11,7 +11,7 @@ public abstract class Actor {
 	/**
 	 * The radius of the actors when drawn.
 	 */
-	public final static int RADIUS = 10;
+	public final static int RADIUS = 6;
 	
 	/**
 	 * The current color for this actor's graphical appearance.
@@ -22,12 +22,12 @@ public abstract class Actor {
 	 * The current position of this actor, in the x and y axes. Because these actors appear as
 	 * circles, this describes the center of the circle.
 	 */
-	private Position position;
+	private Position2D position;
 	
 	/**
 	 * The current velocity of this actor, in the x and y axes.
 	 */
-	private Velocity velocity;
+	private Velocity2D velocity;
 	
 	/**
 	 * The current health for this actor. This should be positive when it's "alive", and anything
@@ -47,8 +47,8 @@ public abstract class Actor {
 	 */
 	public Actor(Color c, double px, double py, double vx, double vy, int h) {
 		this.color    = c;
-		this.position = new Position(px, py);
-		this.velocity = new Velocity(vx, vy);
+		this.position = new Position2D(px, py);
+		this.velocity = new Velocity2D(vx, vy);
 		this.health   = h;
 	}
 	
@@ -64,7 +64,7 @@ public abstract class Actor {
 	 * Getter for the position.
 	 * @return The current position of this actor.
 	 */
-	public Position getPosition() {
+	public Position2D getPosition() {
 		return this.position;
 	}
 	
@@ -72,7 +72,7 @@ public abstract class Actor {
 	 * Getter for the velocity.
 	 * @return The current velocity of this actor.
 	 */
-	public Velocity getVelocity() {
+	public Velocity2D getVelocity() {
 		return this.velocity;
 	}
 	
@@ -82,6 +82,15 @@ public abstract class Actor {
 	 */
 	public int getHealth() {
 		return this.health;
+	}
+	
+	/**
+	 * A helper function to check whether or not this actor has lost enough health to be
+	 * considered dead.
+	 * @return Whether or not this actor is considered dead.
+	 */
+	public boolean hasDied() {
+		return this.getHealth() <= 0;
 	}
 	
 	/**

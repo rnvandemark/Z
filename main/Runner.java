@@ -1,6 +1,6 @@
 package main;
 
-import graphics.GameWindow;
+import graphics.MainFrame;
 
 /**
  * A basic class, solely responsible for housing the program's main function.
@@ -12,6 +12,6 @@ public class Runner {
 	 * @param args A list of input arguments.
 	 */
 	public static void main(String[] args) {
-		new GameWindow();
+		new MainFrame();
 	}
 }

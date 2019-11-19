@@ -38,8 +38,8 @@ public class Player extends Actor {
 	 * @param px The initial position in the x-axis.
 	 * @param py The initial position in the y-axis.
 	 */
-	public Player(Position p) {
-		super(Color.GREEN, p.x, p.y, 0.0, 0.0, NORMAL_MAX_HEALTH);
+	public Player(Position2D p) {
+		super(FULL_HEALTH_COLOR, p.x, p.y, 0.0, 0.0, NORMAL_MAX_HEALTH);
 	}
 	
 	/**
@@ -71,10 +71,27 @@ public class Player extends Actor {
 		double dg = (FULL_HEALTH_COLOR.getGreen() - LOW_HEALTH_COLOR.getGreen()) / (double)this.getMaxHealth();
 		double db = (FULL_HEALTH_COLOR.getBlue()  - LOW_HEALTH_COLOR.getBlue())  / (double)this.getMaxHealth();
 		
-		this.color = new Color(
-			(int)(LOW_HEALTH_COLOR.getRed()   + (dr * this.health)),
-			(int)(LOW_HEALTH_COLOR.getGreen() + (dg * this.health)),
-			(int)(LOW_HEALTH_COLOR.getBlue( ) + (db * this.health))
-		);
+		int nr = (int)(LOW_HEALTH_COLOR.getRed()   + (dr * this.health));
+		if (nr < 0) {
+			nr = 0;
+		} else if (nr > 255) {
+			nr = 255;
+		}
+		
+		int ng = (int)(LOW_HEALTH_COLOR.getGreen() + (dg * this.health));
+		if (ng < 0) {
+			ng = 0;
+		} else if (ng > 255) {
+			ng = 255;
+		}
+		
+		int nb = (int)(LOW_HEALTH_COLOR.getBlue( ) + (db * this.health));
+		if (nb < 0) {
+			nb = 0;
+		} else if (nb > 255) {
+			nb = 255;
+		}
+		
+		this.color = new Color(nr, ng, nb);
 	}
 }

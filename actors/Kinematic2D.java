@@ -1,36 +1,35 @@
 package actors;
 
 /*
- * A simple two-dimensional point representation with floating-point precision, with required
- * coordinates in the x and y axes.
+ * A simple two-dimensional representation of a kinematic measurement with floating-point precision.
  */
-public class Position {
+public abstract class Kinematic2D {
 	
 	/**
-	 * The current position in the x-axis.
+	 * The current kinematic measurement's value in the x-axis.
 	 */
 	public double x;
 	
 	/**
-	 * The current position in the y-axis.
+	 * The current kinematic measurement's value in the y-axis.
 	 */
 	public double y;
-	
+
 	/**
 	 * The default constructor.
-	 * Defaults the x and y position each to 0.
+	 * Defaults the x and y value each to 0.
 	 */
-	public Position() {
+	public Kinematic2D() {
 		this(0.0, 0.0);
 	}
 	
 	/**
 	 * Another constructor.
-	 * Specifies both the x and y positions.
-	 * @param x The new position in the x-axis.
-	 * @param y The new position in the y-axis.
+	 * Specifies both the x and y values.
+	 * @param x The new value in the x-axis.
+	 * @param y The new value in the y-axis.
 	 */
-	public Position(double x, double y) {
+	public Kinematic2D(double x, double y) {
 		this.set(x, y);
 	}
 	
