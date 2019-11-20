@@ -1,12 +1,15 @@
 package graphics;
 
+import java.awt.Color;
 import java.awt.Dimension;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
 
 import actors.Actor;
+import actors.Position2D;
 import game.MapData;
 import game.Session;
+import planning.PlannedPath;
 
 /**
  * The graphical element responsible for rendering the active game's visuals.

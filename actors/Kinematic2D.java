@@ -48,6 +48,6 @@ public abstract class Kinematic2D {
 	 */
 	@Override
 	public String toString() {
-		return String.format("x: %f, y: %f", this.x, this.y);
+		return String.format("{x: %f, y: %f}", this.x, this.y);
 	}
 }

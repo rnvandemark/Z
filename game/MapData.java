@@ -19,14 +19,20 @@ import actors.Position2D;
 public class MapData {
 	
 	/**
-	 * The required width of the map PNG file.
+	 * The required width, in pixels, of the map's PNG file.
 	 */
 	public final static int MAP_WIDTH  = 600;
 	
 	/**
-	 * The required height of the map PNG file.
+	 * The required height, in pixels, of the map's PNG file.
 	 */
 	public final static int MAP_HEIGHT = 400;
+	
+	/**
+	 * The size, in pixels, of a cell in the discretized map. The total number of pixels in the
+	 * area of a single cell then becomes the square of this value.
+	 */
+	public final static int DISCRETIZATION_GRID_SIZE = 3;
 	
 	/**
 	 * The RGB pixel data for the image of the map.

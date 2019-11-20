@@ -23,4 +23,24 @@ public class Position2D extends Kinematic2D {
 	public Position2D(double x, double y) {
 		super(x, y);
 	}
+	
+	/**
+	 * Calculate the linear distance between this point and another.
+	 * @param other The other 2D position.
+	 * @return The distance between this and the other point.
+	 */
+	public double distanceBetween(Position2D other) {
+		double dx = other.x - this.x;
+		double dy = other.y - this.y;
+		return Math.sqrt((dx * dx) + (dy * dy));
+	}
+	
+	/**
+	 * Calculate the angle between this and another position, relative to this point.
+	 * @param other The other 2D position.
+	 * @return The angle between this and the other position, in radians.
+	 */
+	public double angleBetween(Position2D other) {
+		return Math.atan2(other.y - this.y, other.x - this.x);
+	}
 }

@@ -69,6 +69,8 @@ public class MainFrameController implements KeyListener {
 	public void startSession(String dirURL) {
 		this.parent.setSessionPanel(new SessionPanel(dirURL));
 		this.parent.addKeyListener(this.parent.getSessionPanel().getSessionPanelController());
+		this.parent.addMouseListener(this.parent.getSessionPanel().getSessionPanelController());
+		this.parent.addMouseMotionListener(this.parent.getSessionPanel().getSessionPanelController());
 		this.parent.getSessionPanel().getSessionPanelController().start();
 	}
 	
