@@ -1,5 +1,6 @@
 package main;
 
+import graphics.FontManager;
 import graphics.MainFrame;
 
 /**
@@ -12,6 +13,8 @@ public class Runner {
 	 * @param args A list of input arguments.
 	 */
 	public static void main(String[] args) {
+		if (!FontManager.registerFont("zombified/Zombified.ttf"))
+			System.err.println("Failed to register Zombified font.");
 		new MainFrame();
 	}
 }

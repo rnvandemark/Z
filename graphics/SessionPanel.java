@@ -102,21 +102,27 @@ public class SessionPanel extends ChildPanel {
 			this.playerPositionToDraw = this.session.getPlayer().getPosition();
 			this.playerColorToDraw    = this.session.getPlayer().getColor();
 			
+			Wave w = this.session.getCurrentWave();
+			
 			Zombie z;
 			PlannedPath p;
 			Iterator<Position2D> t;
 			LinkedList<Position2D> l;
 			for (int i = 0; i < Wave.MAX_ZOMBIES_AT_ONCE; i++) {
-				z = this.session.getCurrentWave().getZombieAt(i);
+				z = null;
+				if (w != null)
+					z = w.getZombieAt(i);
 				this.zombiePositionsToDraw[i] = z == null ? null : z.getPosition();
 				this.zombieColorsToDraw[i]    = z == null ? null : z.getColor();
 				
-				p = this.session.getCurrentWave().getZombiePathAt(i);
+				p = w == null ? null : w.getZombiePathAt(i);
 				l = null;
 				if (p != null) {
 					if (p.size() >= 2) {
 						l = new LinkedList<Position2D>();
 						t = p.iterator();
+						
+						l.add(this.zombiePositionsToDraw[i]);
 						while (t.hasNext())
 							l.addLast(t.next());
 					}

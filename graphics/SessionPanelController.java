@@ -85,6 +85,13 @@ public class SessionPanelController
 		UserControl c = UserControl.findByKey(e.getKeyCode());
 		if (c != null)
 			this.keysPressed.put(c, true);
+		else {
+			if (e.getKeyCode() == KeyEvent.VK_N) {
+				this.parent.getSession().startNextWave();
+			} else if (e.getKeyCode() == KeyEvent.VK_P) {
+				this.parent.getSession().changePlayerPoints(10);
+			}
+		}
 	}
 
 	/**
@@ -166,8 +173,7 @@ public class SessionPanelController
 	 */
 	@Override
 	public void mousePressed(MouseEvent e) {
-//		System.out.println(e.getX() - this.parent.getBounds().x);
-//		System.out.println(e.getY() - this.parent.getBounds().y);
+		// Nothing to do
 	}
 
 	/**

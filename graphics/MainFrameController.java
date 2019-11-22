@@ -36,12 +36,8 @@ public class MainFrameController implements KeyListener {
 	 */
 	@Override
 	public void keyPressed(KeyEvent e) {
-		int code = e.getKeyCode();
-		switch (code) {
-			case KeyEvent.VK_ESCAPE:
-				this.killSafely();
-				break;
-		}
+		if (e.getKeyCode() == KeyEvent.VK_ESCAPE)
+			this.killSafely();
 	}
 
 	/**
@@ -71,7 +67,7 @@ public class MainFrameController implements KeyListener {
 	 * @param dirURL The map's name.
 	 */
 	public void startSession(String dirURL) {
-		this.parent.setSessionPanel(new SessionPanel(dirURL));
+		this.parent.setSessionRelatedPanels(dirURL);
 		
 		IPlanning.setZombiesPlannerType(RRTPlanner.class);
 		if (!IPlanning.renewZombiesPlanner(

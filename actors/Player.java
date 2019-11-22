@@ -33,13 +33,20 @@ public class Player extends Actor {
 	public final static Color LOW_HEALTH_COLOR = Color.RED;
 	
 	/**
+	 * The number of points that this player has available to spend.
+	 */
+	private int pointCount;
+	
+	/**
 	 * The sole constructor.
 	 * Assumes default values for the super class' color, velocity, and health.
 	 * @param px The initial position in the x-axis.
 	 * @param py The initial position in the y-axis.
+	 * @param initialPoints The initial number of points that the player will have.
 	 */
-	public Player(Position2D p) {
+	public Player(Position2D p, int initialPoints) {
 		super(FULL_HEALTH_COLOR, p.x, p.y, 0.0, 0.0, NORMAL_MAX_HEALTH);
+		this.pointCount = initialPoints;
 	}
 	
 	/**
@@ -48,6 +55,22 @@ public class Player extends Actor {
 	 */
 	public int getMaxHealth() {
 		return NORMAL_MAX_HEALTH;
+	}
+	
+	/**
+	 * Getter for this player's current point count.
+	 * @return The player's current point count.
+	 */
+	public int getPointCount() {
+		return this.pointCount;
+	}
+	
+	/**
+	 * Update the player's total amount of available points.
+	 * @param pointsGained The number of points to add.
+	 */
+	public void changePoints(int pointsGained) {
+		this.pointCount += pointsGained;
 	}
 	
 	/**

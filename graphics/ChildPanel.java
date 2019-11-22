@@ -1,5 +1,6 @@
 package graphics;
 
+import java.awt.Color;
 import java.awt.Container;
 
 import javax.swing.JPanel;
@@ -14,6 +15,14 @@ public abstract class ChildPanel extends JPanel {
 	 * A generated serial version number for this serializable object.
 	 */
 	private static final long serialVersionUID = -1159620028857263458L;
+	
+	/**
+	 * The sole constructor.
+	 * Simply sets the background of the panel to be white.
+	 */
+	public ChildPanel() {
+		this.setBackground(Color.WHITE);
+	}
 	
 	/**
 	 * Given the relationship of Java containers, get the main frame that owns
