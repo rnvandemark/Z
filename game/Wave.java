@@ -1,5 +1,7 @@
 package game;
 
+import java.util.Random;
+
 import actors.Position2D;
 import actors.Zombie;
 import planning.PlannedPath;
@@ -53,6 +55,11 @@ public class Wave {
 	private PlannedPath[] activeZombiePaths;
 	
 	/**
+	 * A pseudo-random number generator to help generate the random zombie speeds.
+	 */
+	private Random random;
+	
+	/**
 	 * The sole constructor.
 	 * Given the number that this wave represents, generate the zombie characteristics for this
 	 * wave, as well as initialize the arrays for the active zombies and their paths.
@@ -64,6 +71,19 @@ public class Wave {
 		this.zombieSpawnsLeft  = (int)(5 * Math.pow(1.2, this.waveNumber));
 		this.activeZombies     = new Zombie[MAX_ZOMBIES_AT_ONCE];
 		this.activeZombiePaths = new PlannedPath[MAX_ZOMBIES_AT_ONCE];
+		this.random            = new Random();
+	}
+	
+	/**
+	 * Generate a random speed through a standard normal distribution, with skew based on the
+	 * wave number.
+	 * @return A randomly generated speed.
+	 */
+	private double getRandomZombieSpeed() {
+		double g = this.random.nextGaussian() * 10;
+		int b = Math.min(60, this.waveNumber) + 15;
+		double p = Math.max(1.0, Math.min(100.0, b + g)) / 100;
+		return Zombie.MIN_SPEED + (Zombie.DIFF_IN_SPEEDS * p);
 	}
 	
 	/**
@@ -122,7 +142,12 @@ public class Wave {
 		if (this.zombieSpawnsLeft > 0) {
 			for (int i = 0; i < MAX_ZOMBIES_AT_ONCE; i++) {
 				if (this.activeZombies[i] == null) {
-					this.activeZombies[i]     = new Zombie(spawnPoint.x, spawnPoint.y, this.zombieHealth);
+					this.activeZombies[i] = new Zombie(
+						spawnPoint.x,
+						spawnPoint.y,
+						this.zombieHealth,
+						this.getRandomZombieSpeed()
+					);
 					this.activeZombiePaths[i] = null;
 					this.zombieSpawnsLeft--;
 					return true;

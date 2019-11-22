@@ -20,6 +20,11 @@ public class Zombie extends Actor {
 	public final static int MAX_SPEED = Player.WALK_SPEED;
 	
 	/**
+	 * The range of speeds possible for a zombie.
+	 */
+	public final static int DIFF_IN_SPEEDS = MAX_SPEED - MIN_SPEED;
+	
+	/**
 	 * The color for the player when they full health.
 	 */
 	public final static Color FULL_HEALTH_COLOR = new Color(0, 200, 0);
@@ -36,6 +41,11 @@ public class Zombie extends Actor {
 	private int initialHealth;
 	
 	/**
+	 * The net speed that this zombie will travel at.
+	 */
+	private double speed;
+	
+	/**
 	 * The sole constructor.
 	 * Takes the initial x and y position coordinates, as well as the health that it will
 	 * spawn with.
@@ -43,9 +53,18 @@ public class Zombie extends Actor {
 	 * @param py The initial y-axis position.
 	 * @param initialHealth The initial health for this zombie.
 	 */
-	public Zombie(double px, double py, int initialHealth) {
+	public Zombie(double px, double py, int initialHealth, double speed) {
 		super(Color.GREEN, px, py, 0.0, 0.0, initialHealth);
 		this.initialHealth = initialHealth;
+		this.speed         = speed; 
+	}
+	
+	/**
+	 * Getter for this zombie's speed.
+	 * @return This zombie's speed.
+	 */
+	public double getSpeed() {
+		return this.speed;
 	}
 	
 	/**

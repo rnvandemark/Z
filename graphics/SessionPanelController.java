@@ -411,7 +411,7 @@ public class SessionPanelController
 								} else {
 									if (p.atNextPosition(currentPositions[i], 2))
 										p.consumeNext();
-									z.setVelocity(p.nextMovement(currentPositions[i], Zombie.MIN_SPEED));
+									z.setVelocity(p.nextMovement(currentPositions[i], z.getSpeed()));
 								}
 							}
 						}
