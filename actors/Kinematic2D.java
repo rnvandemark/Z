@@ -24,6 +24,15 @@ public abstract class Kinematic2D {
 	}
 	
 	/**
+	 * A copy constructor.
+	 * Copies the given values.
+	 * @param other The other value to populate values from.
+	 */
+	public Kinematic2D(Kinematic2D other) {
+		this.set(other);
+	}
+	
+	/**
 	 * Another constructor.
 	 * Specifies both the x and y values.
 	 * @param x The new value in the x-axis.
@@ -41,6 +50,15 @@ public abstract class Kinematic2D {
 	public void set(double x, double y) {
 		this.x = x;
 		this.y = y;
+	}
+	
+	/**
+	 * A simple set function, to set both the x and y coordinates, based on another value.
+	 * @param k The value to copy from.
+	 */
+	public void set(Kinematic2D k) {
+		this.x = k.x;
+		this.y = k.y;
 	}
 	
 	/**

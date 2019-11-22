@@ -67,9 +67,11 @@ public class Player extends Actor {
 	 */
 	@Override
 	public void updateColor() {
-		double dr = (FULL_HEALTH_COLOR.getRed()   - LOW_HEALTH_COLOR.getRed())   / (double)this.getMaxHealth();
-		double dg = (FULL_HEALTH_COLOR.getGreen() - LOW_HEALTH_COLOR.getGreen()) / (double)this.getMaxHealth();
-		double db = (FULL_HEALTH_COLOR.getBlue()  - LOW_HEALTH_COLOR.getBlue())  / (double)this.getMaxHealth();
+		double maxHealth = this.getMaxHealth();
+		
+		double dr = (FULL_HEALTH_COLOR.getRed()   - LOW_HEALTH_COLOR.getRed())   / maxHealth;
+		double dg = (FULL_HEALTH_COLOR.getGreen() - LOW_HEALTH_COLOR.getGreen()) / maxHealth;
+		double db = (FULL_HEALTH_COLOR.getBlue()  - LOW_HEALTH_COLOR.getBlue())  / maxHealth;
 		
 		int nr = (int)(LOW_HEALTH_COLOR.getRed()   + (dr * this.health));
 		if (nr < 0) {

@@ -7,6 +7,7 @@ import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Random;
 
 import javax.imageio.ImageIO;
 
@@ -55,6 +56,11 @@ public class MapData {
 	private ArrayList<Position2D> robotStations;
 	
 	/**
+	 * A pseudo-random number generator to use for generating random spawn points.
+	 */
+	private final Random random;
+	
+	/**
 	 * The sole constructor.
 	 * Takes a folder URL, which contains at least the map's image and a text file describing
 	 * the player's spawn point, and a nonzero positive number of zombie spawns and robot
@@ -66,6 +72,7 @@ public class MapData {
 		this.playerSpawn   = new Position2D(-1, -1);
 		this.zombieSpawns  = new ArrayList<Position2D>();
 		this.robotStations = new ArrayList<Position2D>();
+		this.random        = new Random();
 		
 		try {
 			BufferedImage originalImage = ImageIO.read(
@@ -125,6 +132,27 @@ public class MapData {
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
+	}
+	
+	/**
+	 * Get whether or not a position is valid on the map.
+	 * @param position The position in question.
+	 * @return Whether or not the position is valid.
+	 */
+	public boolean positionIsValid(Position2D position) {
+		return this.image.getRGB((int)position.x, (int)position.y) == Color.WHITE.getRGB();
+	}
+	
+	/**
+	 * Get the position for a random spawn point for a zombie.
+	 * @return The random spawn point.
+	 */
+	public Position2D getRandomZombieSpawnPoint() {
+		if (this.zombieSpawns.isEmpty()) {
+			throw new RuntimeException("No zombie spawn points to select from.");
+		}
+		
+		return this.zombieSpawns.get(this.random.nextInt(this.zombieSpawns.size()));
 	}
 	
 	/**

@@ -2,6 +2,8 @@ package actors;
 
 import java.awt.Color;
 
+import game.MapData;
+
 /**
  * The base concept for an actor that can interact with the world's environment. Basic ideas like
  * movement and appearance can start to be described here.
@@ -103,22 +105,52 @@ public abstract class Actor {
 	}
 	
 	/**
-	 * Given an amount of time that has passed, change this actor's position based on its
-	 * current velocity.
-	 * @param dt The amount of time that has passed, in seconds.
-	 */
-	public void updatePosition(double dt) {
-		this.position.x += (this.velocity.x * dt);
-		this.position.y += (this.velocity.y * dt);
-	}
-	
-	/**
 	 * Set the current x and y velocity.
 	 * @param direction The direction of the vector, in radians.
 	 * @param magnitude The intensity of the velocity (the net speed).
 	 */
 	public void setVelocity(double direction, double magnitude) {
 		this.velocity.setFromVector(direction, magnitude);
+	}
+	
+	/**
+	 * Set the current velocity.
+	 * @param velocity The velocity to copy.
+	 */
+	public void setVelocity(Velocity2D velocity) {
+		this.velocity.set(velocity);
+	}
+	
+	/**
+	 * Set the x and y position.
+	 * @param position The new position to copy.
+	 */
+	public void setPosition(Position2D position) {
+		this.position.set(position);
+	}
+	
+	/**
+	 * Given a desired translation in the x and y axes, attempt to move the desired
+	 * amounts if the provided map allows it. If not, try to move in the individual axes.
+	 * @param dx The translation in the x-axis.
+	 * @param dy The translation in the y-axis.
+	 * @param mapData The data for the map that this actor is trying to move in.
+	 */
+	public void attemptTranslationIn(double dx, double dy, MapData mapData) {
+		Position2D newPosition = this.position.translated(dx, dy);
+		if (mapData.positionIsValid(newPosition)) {
+			this.position.set(newPosition);
+		} else {
+			newPosition = this.position.translated(dx, 0);
+			if (mapData.positionIsValid(newPosition)) {
+				this.position.set(newPosition);
+			} else {
+				newPosition = this.position.translated(0, dy);
+				if (mapData.positionIsValid(newPosition)) {
+					this.position.set(newPosition);
+				}
+			}
+		}
 	}
 	
 	/**

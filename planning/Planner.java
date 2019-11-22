@@ -3,10 +3,26 @@ package planning;
 import actors.Position2D;
 import game.MapData;
 
+/**
+ * An abstract class that establishes a foundation for what a path planner needs to have to
+ * accomplish what it needs to do. This implementation will use some sort of alternative
+ * representation of a session's map (one that is more efficient for the algorithm that this
+ * planner will use), as well as a way to build a path and even make a best effort to
+ * save/rebuild an existing path.
+ */
 public abstract class Planner {
 	
+	/**
+	 * The underlying representation of a map that this planner will use during planning.
+	 */
 	protected MapRepresentation mapRepresentation;
 	
+	/**
+	 * The sole constructor.
+	 * Requires a representation type for the map, as well as the initial data for the map.
+	 * @param mapRepresentation The representation for this planner to use.
+	 * @param initalMapData The map data to initialize the representation with.
+	 */
 	public Planner(MapRepresentation mapRepresentation, MapData initalMapData) {
 		this.mapRepresentation = mapRepresentation;
 		if (!this.buildRepresentation(initalMapData)) {
@@ -14,6 +30,11 @@ public abstract class Planner {
 		}
 	}
 	
+	/**
+	 * Given a map's data, (re)build the underlying representation for the map.
+	 * @param mapData The map data to build the underlying representation with.
+	 * @return Whether or not the representation was built successfully.
+	 */
 	public boolean buildRepresentation(MapData mapData) {
 		return this.mapRepresentation.build(mapData);
 	}

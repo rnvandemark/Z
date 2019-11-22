@@ -1,5 +1,6 @@
 package planning;
 
+import java.util.Iterator;
 import java.util.LinkedList;
 
 import actors.Position2D;
@@ -14,6 +15,23 @@ public class PlannedPath extends LinkedList<Position2D> {
 	 * A generated serial version number for this serializable object.
 	 */
 	private static final long serialVersionUID = -6035395736846205994L;
+	
+	/**
+	 * The default constructor.
+	 * Does nothing special.
+	 */
+	public PlannedPath() {}
+	
+	/**
+	 * A copy constructor.
+	 * Creates a new position object for each node in the underlying linked list.
+	 * @param other The other planned path to copy from.
+	 */
+	public PlannedPath(PlannedPath other) {
+		Iterator<Position2D> iter = other.iterator();
+		while (iter.hasNext())
+			this.addLast(new Position2D(iter.next()));
+	}
 	
 	/**
 	 * Given some small threshold, decide whether or not a provided 2D position is considered equivalent
@@ -57,6 +75,24 @@ public class PlannedPath extends LinkedList<Position2D> {
 		}
 	}
 	
+	/**
+	 * Get the position for the second node in this linked list. Return null if
+	 * there is no second node.
+	 * @return The second node if there are at least that many, null if not.
+	 */
+	public Position2D getSecond() {
+		return this.size() < 2 ? null : this.get(1);
+	}
+	
+	/**
+	 * Get the position for the second to last node in this linked list. Return
+	 * null if there is no second to last node.
+	 * @return The second to last node if there are at least that many, null if not.
+	 */
+	public Position2D getSecondToLast() {
+		return this.size() < 2 ? null : this.get(this.size() - 2);
+	}
+
 	/**
 	 * Override from {@link java.lang.Object} method.
 	 */

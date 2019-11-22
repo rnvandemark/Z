@@ -15,6 +15,15 @@ public class Velocity2D extends Kinematic2D {
 	}
 	
 	/**
+	 * A copy constructor.
+	 * Copies the given position values.
+	 * @param other The other velocity value to populate values from.
+	 */
+	public Velocity2D(Velocity2D other) {
+		super(other);
+	}
+	
+	/**
 	 * Another constructor.
 	 * Specifies both the x and y velocities.
 	 * @param x The new velocity in the x-axis.

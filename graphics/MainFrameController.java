@@ -4,6 +4,10 @@ import java.awt.event.KeyEvent;
 import java.awt.event.KeyListener;
 import java.awt.event.WindowEvent;
 
+import game.MapData;
+import planning.IPlanning;
+import planning.RRTPlanner;
+
 /**
  * The controller class for the MainFrame graphics class. This contains the code for all
  * of the events coming through the main GUI.
@@ -68,9 +72,19 @@ public class MainFrameController implements KeyListener {
 	 */
 	public void startSession(String dirURL) {
 		this.parent.setSessionPanel(new SessionPanel(dirURL));
+		
+		IPlanning.setZombiesPlannerType(RRTPlanner.class);
+		if (!IPlanning.renewZombiesPlanner(
+				new Class<?>[]{MapData.class, boolean.class},
+				this.parent.getSessionPanel().getSession().getMapData(),
+				true)) {
+			throw new RuntimeException("Failed to set the Zombies path planner.");
+		}
+		
 		this.parent.addKeyListener(this.parent.getSessionPanel().getSessionPanelController());
 		this.parent.addMouseListener(this.parent.getSessionPanel().getSessionPanelController());
 		this.parent.addMouseMotionListener(this.parent.getSessionPanel().getSessionPanelController());
+		
 		this.parent.getSessionPanel().getSessionPanelController().start();
 	}
 	
