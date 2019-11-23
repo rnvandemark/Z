@@ -29,16 +29,9 @@ public class RRTPlanner extends Planner {
 	private final static double INTERP_DISTANCE = 2.5;
 	
 	/**
-	 * When checking for a straight line path between two points, it's necessary to create
-	 * discretized segments of the line and check if those points are valid positions for
-	 * actors to inhabit. This value if the length of those discretized lines.
-	 */
-	private final static double DISC_DISTANCE_RATIO = 0.5;
-	
-	/**
 	 * The amount of milliseconds to attempt building a path for before timing out / failing.
 	 */
-	private final static int TIMEOUT_MS = 500;
+	private final static int TIMEOUT_MS = 1500;
 	
 	/**
 	 * While checking if a path is clear, if a discretized point corresponds to an uninhabitable
@@ -67,69 +60,16 @@ public class RRTPlanner extends Planner {
 	}
 	
 	/**
-	 * Checks whether or not the straight line path between the start and goal position is
-	 * completely clear of obstacles.
-	 * @param start The start position of the map.
-	 * @param goal The goal position of the map.
-	 * @return An effective tuple of size two, the first value being whether or not the entire
-	 * path is clear, the second being the furthest valid position. If the path is completely
-	 * clear, the second position is equivalent to the goal position. If not, the last valid
-	 * point is returned.
-	 */
-	public SimpleEntry<Boolean, Position2D> pathIsClear(Position2D start, Position2D goal) {
-		DiscretizedMap mapRep = (DiscretizedMap)this.mapRepresentation;
-		
-		double stepDistance  = DISC_DISTANCE_RATIO * mapRep.getDiscretizationRatio();
-		double stepAngle     = start.angleBetween(goal);
-		double totalDistance = start.distanceBetween(goal);
-		
-		double displacement     = 0.0;
-		int exitStatus          = 0;
-		Position2D stepPosition = new Position2D(-1, -1);
-		
-		int px, py;
-		Position2D furthestValid = null;
-		
-		while (exitStatus == 0) {
-			if (displacement >= totalDistance) {
-				displacement = totalDistance;
-				exitStatus   = 2;
-			}
-			
-			stepPosition.set(
-				start.x + (displacement * Math.cos(stepAngle)),
-				start.y + (displacement * Math.sin(stepAngle))
-			);
-			
-			px = (int)Math.round(stepPosition.x);
-			py = (int)Math.round(stepPosition.y);
-			if (!mapRep.openAtOriginal(px, py)) {
-				exitStatus = 1;
-			} else {
-				if (furthestValid == null)
-					furthestValid = new Position2D();
-				furthestValid.set(px, py);
-			}
-			
-			displacement += stepDistance;
-		}
-		
-		if (exitStatus == 2) {
-			furthestValid.set(goal);
-		}
-		
-		return new SimpleEntry<Boolean, Position2D>(exitStatus == 2, furthestValid);
-	}
-	
-	/**
-	 * Override from the {@link planning.MapRepresentation} method.
+	 * Override from the {@link planning.Planner} method.
 	 */
 	@Override
 	public PlannedPath generatePath(Position2D start, Position2D goal) {
+		DiscretizedMap mapRep = (DiscretizedMap)this.mapRepresentation;
+		
 		RRTNode startNode = new RRTNode(null, start);
 		RRTNode finalNode = null;
 		
-		if (this.pathIsClear(start, goal).getKey().booleanValue()) {
+		if (mapRep.pathIsClear(start, goal).getKey().booleanValue()) {
 			// The path from the start to goal positions is clear, finished.
 			finalNode = new RRTNode(startNode, goal);
 		} else {
@@ -176,7 +116,7 @@ public class RRTPlanner extends Planner {
 				}
 				
 				// Check if the path is clear and the last habitable position.
-				interpolationPair  = this.pathIsClear(closestNode.position, interpolatedPosition);
+				interpolationPair  = mapRep.pathIsClear(closestNode.position, interpolatedPosition);
 				interpolationValid = interpolationPair.getKey().booleanValue();
 				bestEffortPosition = interpolationPair.getValue();
 				
@@ -187,9 +127,8 @@ public class RRTPlanner extends Planner {
 					
 					// If the path between this new node and the goal position is clear,
 					// finish the search by creating the final connection.
-					if (this.pathIsClear(newNode.position, goal).getKey().booleanValue()) {
+					if (mapRep.pathIsClear(newNode.position, goal).getKey().booleanValue())
 						finalNode = new RRTNode(newNode, goal);
-					}
 				}
 			}
 		}
@@ -219,7 +158,9 @@ public class RRTPlanner extends Planner {
 					
 					// Work backwards in the tree until the start node is reached and passed.
 					while (toAdd != null) {
-						if (this.pathIsClear(toAdd.position, lastAddedPosition).getKey().booleanValue()) {
+						if (mapRep.pathIsClear(
+								toAdd.position, lastAddedPosition
+							).getKey().booleanValue()) {
 							// The path between a node and some other node before its parent
 							// is clear, keep a reference to it to make a shortcut later
 							// (unless an earlier connection is found).
@@ -242,7 +183,7 @@ public class RRTPlanner extends Planner {
 	}
 	
 	/**
-	 * Override from the {@link planning.MapRepresentation} method.
+	 * Override from the {@link planning.Planner} method.
 	 */
 	@Override
 	public boolean salvagePath(PlannedPath old, Position2D newStart, Position2D newGoal) {
@@ -256,8 +197,9 @@ public class RRTPlanner extends Planner {
 				// goal positions. There's more that can be done to salvage a path, but this
 				// seems a good balance between brevity and allowing for a new, more efficient
 				// path to be found as time passes.
-				SimpleEntry<Boolean, Position2D> s = this.pathIsClear(newStart, old.getSecond());
-				SimpleEntry<Boolean, Position2D> g = this.pathIsClear(newGoal, old.getSecondToLast());
+				DiscretizedMap mapRep = (DiscretizedMap)this.mapRepresentation;
+				SimpleEntry<Boolean, Position2D> s = mapRep.pathIsClear(newStart, old.getSecond());
+				SimpleEntry<Boolean, Position2D> g = mapRep.pathIsClear(newGoal, old.getSecondToLast());
 				if (s.getKey().booleanValue() && g.getKey().booleanValue()) {
 					old.removeFirst();
 					old.addFirst(newStart);
@@ -324,7 +266,9 @@ public class RRTPlanner extends Planner {
 		 * @return An effective tuple of size two, the first value being the the closest
 		 * node, the second one being the distance between the node and the point.
 		 */
-		public static SimpleEntry<RRTNode, Double> closestTo(LinkedList<RRTNode> nodes, Position2D other) {
+		public static SimpleEntry<RRTNode, Double> closestTo(
+			LinkedList<RRTNode> nodes, Position2D other
+		) {
 			if (nodes.isEmpty()) {
 				return null;
 			} else {

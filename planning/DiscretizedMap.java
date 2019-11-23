@@ -2,7 +2,9 @@ package planning;
 
 import java.awt.Color;
 import java.awt.image.BufferedImage;
+import java.util.AbstractMap.SimpleEntry;
 
+import actors.Position2D;
 import game.MapData;
 
 /**
@@ -12,6 +14,13 @@ import game.MapData;
  * to reside in) or otherwise.
  */
 public class DiscretizedMap extends MapRepresentation {
+	
+	/**
+	 * When checking for a straight line path between two points, it's necessary to create
+	 * discretized segments of the line and check if those points are valid positions for
+	 * actors to inhabit. This value if the length of those discretized lines.
+	 */
+	private final static double DEFAULT_DISC_DISTANCE_RATIO = 0.5;
 	
 	/**
 	 * The ratio of discretization. Given an input image of A pixels wide and B pixels high,
@@ -39,35 +48,113 @@ public class DiscretizedMap extends MapRepresentation {
 	}
 	
 	/**
-	 * Override from the {@link planning.MapRepresentation} method.
+	 * Checks whether or not the straight line path between the start and goal position is
+	 * completely clear of obstacles.
+	 * @param start The start position of the map.
+	 * @param goal The goal position of the map.
+	 * @param stepDistance The distance to interpolate by for each check.
+	 * @return An effective tuple of size two, the first value being whether or not the entire
+	 * path is clear, the second being the furthest valid position. If the path is completely
+	 * clear, the second position is equivalent to the goal position. If not, the last valid
+	 * point is returned.
 	 */
-	@Override
-	public boolean build(MapData mapData) {
-		BufferedImage initialImage = mapData.getImage();
-		int cw = (int)Math.ceil(initialImage.getWidth()  / (double)this.discretizationRatio);
-		int ch = (int)Math.ceil(initialImage.getHeight() / (double)this.discretizationRatio);
-		this.cells = new boolean[cw][ch];
+	public SimpleEntry<Boolean, Position2D> pathIsClear(
+			Position2D start, Position2D goal, double exclusionThreshold, double stepDistance
+	) {
+		double stepAngle     = start.angleBetween(goal);
+		double totalDistance = start.distanceBetween(goal);
 		
-		int blackRGB = Color.BLACK.getRGB();
-		for (int x = 0; x < cw; x++) {
-			for (int y = 0; y < ch; y++) {
-				boolean occupied = false;
-				
-				for (int i = 0; i < this.discretizationRatio; i++) {
-					if (occupied)
-						break;
-					for (int j = 0; j < this.discretizationRatio; j++) {
-						occupied = initialImage.getRGB(x + i, y + j) == blackRGB;
-						if (occupied)
-							break;
-					}
-				}
-				
-				this.cells[x][y] = occupied;
+		double displacement     = 0.0;
+		int exitStatus          = 0;
+		Position2D stepPosition = new Position2D(-1, -1);
+		
+		int pxi, pyi;
+		double pxd, pyd;
+		Position2D furthestValid = null;
+		
+		while (exitStatus == 0) {
+			if (displacement >= totalDistance) {
+				displacement = totalDistance;
+				exitStatus   = 2;
 			}
+			
+			stepPosition.set(
+				start.x + (displacement * Math.cos(stepAngle)),
+				start.y + (displacement * Math.sin(stepAngle))
+			);
+			
+			pxd = Math.round(stepPosition.x);
+			pyd = Math.round(stepPosition.y);
+			
+			if ((exclusionThreshold < 0)
+					|| ((!start.equals(pxd, pyd, exclusionThreshold))
+							&& (!goal.equals(pxd, pyd, exclusionThreshold))
+			)) {
+				pxi = (int)pxd;
+				pyi = (int)pyd;
+				
+				if (!this.openAt(pxi, pyi)) {
+					exitStatus = 1;
+				} else {
+					if (furthestValid == null)
+						furthestValid = new Position2D();
+					furthestValid.set(pxi, pyi);
+				}
+			}
+			
+			displacement += stepDistance;
 		}
 		
-		return true;
+		if (exitStatus == 2) {
+			if (furthestValid == null)
+				furthestValid = new Position2D(goal);
+			else
+				furthestValid.set(goal);
+		}
+		
+		return new SimpleEntry<Boolean, Position2D>(exitStatus == 2, furthestValid);
+	}
+	
+	/**
+	 * Checks whether or not the straight line path between the start and goal position is
+	 * completely clear of obstacles, with a default discretization distance.
+	 * @param start The start position of the map.
+	 * @param goal The goal position of the map.
+	 * @param stepDistance The distance to interpolate by for each check.
+	 * @return An effective tuple of size two, the first value being whether or not the entire
+	 * path is clear, the second being the furthest valid position. If the path is completely
+	 * clear, the second position is equivalent to the goal position. If not, the last valid
+	 * point is returned.
+	 */
+	public SimpleEntry<Boolean, Position2D> pathIsClear(
+			Position2D start, Position2D goal, double exclusionThreshold) {
+		return this.pathIsClear(
+			start,
+			goal,
+			exclusionThreshold,
+			DEFAULT_DISC_DISTANCE_RATIO * this.discretizationRatio
+		);
+	}
+	
+	/**
+	 * Checks whether or not the straight line path between the start and goal position is
+	 * completely clear of obstacles, with a default discretization distance, and ignoring
+	 * an exclusion threshold.
+	 * @param start The start position of the map.
+	 * @param goal The goal position of the map.
+	 * @param stepDistance The distance to interpolate by for each check.
+	 * @return An effective tuple of size two, the first value being whether or not the entire
+	 * path is clear, the second being the furthest valid position. If the path is completely
+	 * clear, the second position is equivalent to the goal position. If not, the last valid
+	 * point is returned.
+	 */
+	public SimpleEntry<Boolean, Position2D> pathIsClear(Position2D start, Position2D goal) {
+		return this.pathIsClear(
+			start,
+			goal,
+			-1,
+			DEFAULT_DISC_DISTANCE_RATIO * this.discretizationRatio
+		);
 	}
 	
 	/**
@@ -118,5 +205,38 @@ public class DiscretizedMap extends MapRepresentation {
 	 */
 	public int getDiscretizationRatio() {
 		return this.discretizationRatio;
+	}
+	
+	/**
+	 * Override from the {@link planning.MapRepresentation} method.
+	 */
+	@Override
+	public boolean build(MapData mapData) {
+		BufferedImage initialImage = mapData.getImage();
+		int dr = this.discretizationRatio;
+		int cw = (int)Math.ceil(initialImage.getWidth()  / (double)dr);
+		int ch = (int)Math.ceil(initialImage.getHeight() / (double)dr);
+		this.cells = new boolean[cw][ch];
+		
+		int blackRGB = Color.BLACK.getRGB();
+		for (int x = 0; x < cw; x++) {
+			for (int y = 0; y < ch; y++) {
+				boolean occupied = false;
+				
+				for (int i = 0; i < this.discretizationRatio; i++) {
+					if (occupied)
+						break;
+					for (int j = 0; j < this.discretizationRatio; j++) {
+						occupied = initialImage.getRGB((x * dr) + i, (y * dr) + j) == blackRGB;
+						if (occupied)
+							break;
+					}
+				}
+				
+				this.cells[x][y] = occupied;
+			}
+		}
+		
+		return true;
 	}
 }

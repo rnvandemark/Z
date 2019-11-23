@@ -7,6 +7,11 @@ package actors;
 public class Position2D extends Kinematic2D {
 	
 	/**
+	 * An distance epsilon threshold for position equality.
+	 */
+	private double EQUALITY_EPSILON = 0.01;
+	
+	/**
 	 * The default constructor.
 	 * Defaults the x and y position each to 0.
 	 */
@@ -39,8 +44,18 @@ public class Position2D extends Kinematic2D {
 	 * @return The distance between this and the other point.
 	 */
 	public double distanceBetween(Position2D other) {
-		double dx = other.x - this.x;
-		double dy = other.y - this.y;
+		return this.distanceBetween(other.x, other.y);
+	}
+	
+	/**
+	 * Calculate the linear distance between this point and another.
+	 * @param px The other x-coordinate.
+	 * @param py The other y-coordinate.
+	 * @return The distance between this and the other point.
+	 */
+	public double distanceBetween(double px, double py) {
+		double dx = px - this.x;
+		double dy = py - this.y;
 		return Math.sqrt((dx * dx) + (dy * dy));
 	}
 	
@@ -72,5 +87,37 @@ public class Position2D extends Kinematic2D {
 		Position2D p = new Position2D(this);
 		p.translate(dx, dy);
 		return p;
+	}
+	
+	/**
+	 * Checks for what's considered equality between a 2D position and an x,y coordinate pair.
+	 * @param px The other x-coordinate.
+	 * @param py The other y-coordinate.
+	 * @param eps An epsilon threshold to consider equality with.
+	 * @return Whether or not the points can be considered equal.
+	 */
+	public boolean equals(double px, double py, double eps) {
+		return this.distanceBetween(px, py) < eps;
+	}
+	
+	/**
+	 * Checks for what's considered equality between a 2D position and an x,y coordinate pair.
+	 * @param px The other x-coordinate.
+	 * @param py The other y-coordinate.
+	 * @return Whether or not the points can be considered equal.
+	 */
+	public boolean equals(double px, double py) {
+		return this.equals(px, py, EQUALITY_EPSILON);
+	}
+	
+	/**
+	 * Override from the {@link java.lang.Object} method.
+	 */
+	@Override
+	public boolean equals(Object obj) {
+		if (obj instanceof Position2D)
+			return this.equals(((Position2D) obj).x, ((Position2D) obj).y);
+		else
+			return false;
 	}
 }
