@@ -9,6 +9,8 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.Iterator;
+import java.util.Set;
 
 import javax.imageio.ImageIO;
 
@@ -36,17 +38,31 @@ public class VisibilityGraph extends MapRepresentation {
 	 * has a list of nodes, where each node is both visible by the key node, and the
 	 * key node is visible to each node.
 	 */
-	private HashMap<VGNode, ArrayList<VGNode>> nodeMap;
+	private HashMap<VGNode, VGEdgeList> nodeMap;
+	
+	/**
+	 * Whether or not this graph should try to be more minimalistic. In other words,
+	 * whether or not this graph should attempt to realize that there are multiple
+	 * vertices near each other, and that some should be removed because the quality
+	 * of the graph can still be maintained. If this value is less than or equal to
+	 * zero, the cleanliness routine will not be initiated. Otherwise, this value
+	 * describes a distance on the discretized map representation that the graph is
+	 * built from.
+	 */
+	private double cleanlinessThreshold;
 	
 	/**
 	 * The sole constructor.
 	 * Takes a discretization ratio to build the discretized map with.
 	 * @param discretizationRatio The magnitude of discretization to perform on the
 	 * map.
+	 * @param cleanlinessThreshold The threshold that defines the degree to which
+	 * the clean up procedure should look for redundant nodes.
 	 */
-	public VisibilityGraph(int discretizationRatio) {
-		this.discMap = new DiscretizedMap(discretizationRatio);
-		this.nodeMap = null;
+	public VisibilityGraph(int discretizationRatio, double cleanlinessThreshold) {
+		this.discMap              = new DiscretizedMap(discretizationRatio);
+		this.nodeMap              = null;
+		this.cleanlinessThreshold = cleanlinessThreshold;
 	}
 	
 	/**
@@ -335,13 +351,17 @@ public class VisibilityGraph extends MapRepresentation {
 	 * @param allNodes A collection of all the confirmed nodes in the graph.
 	 */
 	public void addEdgesFor(VGNode n, Collection<VGNode> allNodes) {
+		ArrayList<VGNode> existingDestinations = new ArrayList<VGNode>();
+		for (VGEdge e : this.nodeMap.get(n))
+			existingDestinations.add(e.destination);
+		
 		// Loop through all the nodes to look for possible connections.
 		for (VGNode o : allNodes) {
 			// Don't try to connect a node with itself.
 			if (!n.equals(o)) {
 				
 				// Don't try to connect nodes that are already connected.
-				if (!this.nodeMap.get(n).contains(o)) {
+				if (!existingDestinations.contains(o)) {
 					
 					// If the path is clear from one node to another, add two
 					// edges between them in the graph, effectively making a
@@ -349,8 +369,9 @@ public class VisibilityGraph extends MapRepresentation {
 					if (this.discMap.pathIsClear(
 						n.position, o.position, 0.75 * this.discMap.getDiscretizationRatio()
 					).getKey().booleanValue()) {
-						this.nodeMap.get(n).add(o);
-						this.nodeMap.get(o).add(n);
+						double distance = n.distanceBetween(o);
+						this.nodeMap.get(n).add(new VGEdge(distance, o));
+						this.nodeMap.get(o).add(new VGEdge(distance, n));
 					}
 				}
 			}
@@ -367,8 +388,8 @@ public class VisibilityGraph extends MapRepresentation {
 		boolean result = true;
 		
 		// Remove all the edges leading to this node.
-		for (VGNode o : this.nodeMap.get(n))
-			if (!this.nodeMap.get(o).remove(n))
+		for (VGEdge e : this.nodeMap.get(n))
+			if (!this.nodeMap.get(e.destination).remove(n))
 				result = false;
 		
 		// Remove this node from the graph's underlying map.
@@ -376,6 +397,24 @@ public class VisibilityGraph extends MapRepresentation {
 			result = false;
 		
 		return result;
+	}
+	
+	/**
+	 * Get a set of the nodes in this graph by getting all of the keys.
+	 * @return A set of the nodes in the graph.
+	 */
+	public Set<VGNode> getNodeSet() {
+		return this.nodeMap.keySet();
+	}
+	
+	/**
+	 * Given a node in the graph, get the list of edges that it has. If the node
+	 * is not in the graph, this will return null.
+	 * @param n The node in the graph to get all of its edges for.
+	 * @return The list of edges that the provided node has in the graph.
+	 */
+	public VGEdgeList getEdgesFor(VGNode n) {
+		return this.nodeMap.get(n);
 	}
 	
 	/**
@@ -417,12 +456,12 @@ public class VisibilityGraph extends MapRepresentation {
 		
 		g2d.setColor(Color.CYAN);
 		for (VGNode n : nodeMap.keySet())
-			for (VGNode o : nodeMap.get(n))
+			for (VGEdge e : nodeMap.get(n))
 				g2d.drawLine(
 					(int)n.position.x * dr,
 					(int)n.position.y * dr,
-					(int)o.position.x * dr,
-					(int)o.position.y * dr
+					(int)e.destination.position.x * dr,
+					(int)e.destination.position.y * dr
 				);
 		
 		try {
@@ -458,12 +497,55 @@ public class VisibilityGraph extends MapRepresentation {
 			}
 		}
 		
+		// If desired, clean up the visibility graph.
+		if (this.cleanlinessThreshold > 0) {
+			HashMap<VGNode, ArrayList<VGNode>> nodesToCheck = new HashMap<VGNode, ArrayList<VGNode>>();
+			
+			for (VGNode n : foundNodes) {
+				nodesToCheck.put(n, new ArrayList<VGNode>());
+				for (VGNode o : foundNodes) {
+					if ((!n.equals(o)) && (n.distanceBetween(o) <= this.cleanlinessThreshold)) {
+						nodesToCheck.get(n).add(o);
+					}
+				}
+			}
+
+			ArrayList<VGNode> l, toRemove;
+			int maxSize;
+			VGNode maxObj;
+			while (!nodesToCheck.isEmpty()) {
+				toRemove = new ArrayList<VGNode>();
+				maxSize  = 0;
+				maxObj   = null;
+				
+				for (VGNode k : nodesToCheck.keySet()) {
+					l = nodesToCheck.get(k);
+					
+					if (l.isEmpty()) {
+						toRemove.add(k);
+					} else if (l.size() > maxSize) {
+						maxSize = l.size();
+						maxObj  = k;
+					}
+				}
+				
+				if (maxObj != null) {
+					for (VGNode n : nodesToCheck.get(maxObj))
+						foundNodes.remove(n);
+					nodesToCheck.remove(maxObj);
+				}
+				
+				for (VGNode n : toRemove)
+					nodesToCheck.remove(n);
+			}
+		}
+		
 		// Declare the node map.
-		this.nodeMap = new HashMap<VGNode, ArrayList<VGNode>>();
+		this.nodeMap = new HashMap<VGNode, VGEdgeList>();
 		
 		// Give each node a list of empty connections.
 		for (VGNode n : foundNodes)
-			this.nodeMap.put(n, new ArrayList<VGNode>());
+			this.nodeMap.put(n, new VGEdgeList());
 		
 		// Try and connect each vertex in the list of vertices.
 		for (VGNode n : foundNodes)
@@ -475,7 +557,7 @@ public class VisibilityGraph extends MapRepresentation {
 	/**
 	 * A simple helper class to represent a node in the graph.
 	 */
-	private static class VGNode {
+	public class VGNode {
 		
 		/**
 		 * The position that this node has in the graph.
@@ -487,8 +569,17 @@ public class VisibilityGraph extends MapRepresentation {
 		 * Simply takes a position.
 		 * @param position This node's position.
 		 */
-		public VGNode(Position2D position) {
+		private VGNode(Position2D position) {
 			this.position = position;
+		}
+		
+		/**
+		 * Get the distance between two nodes' positions.
+		 * @param n The other node.
+		 * @return The distance between this and the other node.
+		 */
+		private double distanceBetween(VGNode n) {
+			return this.position.distanceBetween(n.position);
 		}
 		
 		/**
@@ -497,7 +588,7 @@ public class VisibilityGraph extends MapRepresentation {
 		 * @return Whether or not this node's position and the other can be
 		 * considered equal.
 		 */
-		public boolean nearEqualTo(Position2D p) {
+		private boolean nearEqualTo(Position2D p) {
 			return this.position.equals(p);
 		}
 
@@ -518,6 +609,84 @@ public class VisibilityGraph extends MapRepresentation {
 		@Override
 		public String toString() {
 			return this.position.toString();
+		}
+	}
+	
+	/**
+	 * A simple helper class to objectify the edges between two nodes, including
+	 * the destination node and the weight between them.
+	 */
+	public class VGEdge {
+		
+		/**
+		 * The "cost" for traversing the connection between this node and the
+		 * destination node.
+		 */
+		private double weight;
+		
+		/**
+		 * The node that this edge leads to.
+		 */
+		private VGNode destination;
+		
+		/**
+		 * The sole constructor.
+		 * Takes all the arguments necessary to build and edge, the traversal weight
+		 * and the destination node.
+		 * @param weight The weight for traversal.
+		 * @param destination The node that traversing this edge leads to.
+		 */
+		private VGEdge(double weight, VGNode destination) {
+			this.weight      = weight;
+			this.destination = destination;
+		}
+		
+		/**
+		 * Getter for the weight of this edge.
+		 * @return The weight of this edge.
+		 */
+		public double getWeight() {
+			return this.weight;
+		}
+		
+		/**
+		 * Getter for the destination node of this edge.
+		 * @return The destination node of this edge.
+		 */
+		public VGNode getDestination() {
+			return this.destination;
+		}
+	}
+	
+	/*
+	 * A simple helper class to represent an array list of graph edges.
+	 */
+	public class VGEdgeList extends ArrayList<VGEdge> {
+		
+		/**
+		 * A generated serial version number for this serializable object.
+		 */
+		private static final long serialVersionUID = -8606906925166626247L;
+		
+		/**
+		 * A helper function to remove an edge given its destination node.
+		 * @param n The destination node of the edge to remove.
+		 * @return Whether or not the destination node's edge was
+		 * successfully removed.
+		 */
+		private boolean remove(VGNode n) {
+			Iterator<VGEdge> iter = this.iterator();
+			
+			VGEdge e;
+			while (iter.hasNext()) {
+				e = iter.next();
+				if (e.destination.equals(n)) {
+					this.remove(e);
+					return true;
+				}
+			}
+			
+			return false;
 		}
 	}
 }

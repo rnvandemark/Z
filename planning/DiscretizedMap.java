@@ -149,12 +149,7 @@ public class DiscretizedMap extends MapRepresentation {
 	 * point is returned.
 	 */
 	public SimpleEntry<Boolean, Position2D> pathIsClear(Position2D start, Position2D goal) {
-		return this.pathIsClear(
-			start,
-			goal,
-			-1,
-			DEFAULT_DISC_DISTANCE_RATIO * this.discretizationRatio
-		);
+		return this.pathIsClear(start, goal, -1);
 	}
 	
 	/**
