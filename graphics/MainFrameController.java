@@ -71,9 +71,11 @@ public class MainFrameController implements KeyListener {
 		
 		IPlanning.setZombiesPlannerType(RRTPlanner.class);
 		if (!IPlanning.renewZombiesPlanner(
-				new Class<?>[]{MapData.class, boolean.class},
+				new Class<?>[]{MapData.class, boolean.class, double.class},
 				this.parent.getSessionPanel().getSession().getMapData(),
-				true)) {
+				true,
+				30.0
+		)) {
 			throw new RuntimeException("Failed to set the Zombies path planner.");
 		}
 		
@@ -85,7 +87,8 @@ public class MainFrameController implements KeyListener {
 	}
 	
 	/**
-	 * Safely bring down active components of the application and close the parent {@link graphics.MainFrame}.
+	 * Safely bring down active components of the application and close the parent
+	 * {@link graphics.MainFrame}.
 	 */
 	public void killSafely() {
 		if (this.parent.getSessionPanel() != null)

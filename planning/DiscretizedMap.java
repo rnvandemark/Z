@@ -52,6 +52,8 @@ public class DiscretizedMap extends MapRepresentation {
 	 * completely clear of obstacles.
 	 * @param start The start position of the map.
 	 * @param goal The goal position of the map.
+	 * @param exclusionThreshold The distance away from the start and goal positions that are
+	 * ignored when checking for obstacle collisions.
 	 * @param stepDistance The distance to interpolate by for each check.
 	 * @return An effective tuple of size two, the first value being whether or not the entire
 	 * path is clear, the second being the furthest valid position. If the path is completely
@@ -69,7 +71,6 @@ public class DiscretizedMap extends MapRepresentation {
 		Position2D stepPosition = new Position2D(-1, -1);
 		
 		int pxi, pyi;
-		double pxd, pyd;
 		Position2D furthestValid = null;
 		
 		while (exitStatus == 0) {
@@ -83,22 +84,20 @@ public class DiscretizedMap extends MapRepresentation {
 				start.y + (displacement * Math.sin(stepAngle))
 			);
 			
-			pxd = Math.round(stepPosition.x);
-			pyd = Math.round(stepPosition.y);
-			
-			if ((exclusionThreshold < 0)
-					|| ((!start.equals(pxd, pyd, exclusionThreshold))
-							&& (!goal.equals(pxd, pyd, exclusionThreshold))
-			)) {
-				pxi = (int)pxd;
-				pyi = (int)pyd;
+			if ((exclusionThreshold <= 0)
+				|| ((!start.equals(stepPosition, exclusionThreshold))
+					&& (!goal.equals(stepPosition, exclusionThreshold)))
+			) {
+				pxi = (int)Math.round(stepPosition.x);
+				pyi = (int)Math.round(stepPosition.y);
 				
 				if (!this.openAt(pxi, pyi)) {
 					exitStatus = 1;
 				} else {
 					if (furthestValid == null)
-						furthestValid = new Position2D();
-					furthestValid.set(pxi, pyi);
+						furthestValid = new Position2D(pxi, pyi);
+					else
+						furthestValid.set(pxi, pyi);
 				}
 			}
 			
@@ -120,7 +119,8 @@ public class DiscretizedMap extends MapRepresentation {
 	 * completely clear of obstacles, with a default discretization distance.
 	 * @param start The start position of the map.
 	 * @param goal The goal position of the map.
-	 * @param stepDistance The distance to interpolate by for each check.
+	 * @param exclusionThreshold The distance away from the start and goal positions that are
+	 * ignored when checking for obstacle collisions.
 	 * @return An effective tuple of size two, the first value being whether or not the entire
 	 * path is clear, the second being the furthest valid position. If the path is completely
 	 * clear, the second position is equivalent to the goal position. If not, the last valid
@@ -142,7 +142,6 @@ public class DiscretizedMap extends MapRepresentation {
 	 * an exclusion threshold.
 	 * @param start The start position of the map.
 	 * @param goal The goal position of the map.
-	 * @param stepDistance The distance to interpolate by for each check.
 	 * @return An effective tuple of size two, the first value being whether or not the entire
 	 * path is clear, the second being the furthest valid position. If the path is completely
 	 * clear, the second position is equivalent to the goal position. If not, the last valid
@@ -187,11 +186,7 @@ public class DiscretizedMap extends MapRepresentation {
 	 * @return The height of the discretized map.
 	 */
 	public int getHeight() {
-		if (this.getWidth() == 0) {
-			return 0;
-		} else {
-			return this.cells[0].length;
-		}
+		return this.getWidth() == 0 ? 0 : this.cells[0].length;
 	}
 	
 	/**
@@ -218,15 +213,9 @@ public class DiscretizedMap extends MapRepresentation {
 			for (int y = 0; y < ch; y++) {
 				boolean occupied = false;
 				
-				for (int i = 0; i < this.discretizationRatio; i++) {
-					if (occupied)
-						break;
-					for (int j = 0; j < this.discretizationRatio; j++) {
+				for (int i = 0; (i < this.discretizationRatio) && (!occupied); i++)
+					for (int j = 0; (j < this.discretizationRatio) && (!occupied); j++)
 						occupied = initialImage.getRGB((x * dr) + i, (y * dr) + j) == blackRGB;
-						if (occupied)
-							break;
-					}
-				}
 				
 				this.cells[x][y] = occupied;
 			}

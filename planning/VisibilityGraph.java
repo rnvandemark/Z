@@ -513,7 +513,9 @@ public class VisibilityGraph extends MapRepresentation {
 			ArrayList<VGNode> l, toRemove;
 			int maxSize;
 			VGNode maxObj;
-			while (!nodesToCheck.isEmpty()) {
+			
+			boolean continueLoop = true;
+			while (continueLoop) {
 				toRemove = new ArrayList<VGNode>();
 				maxSize  = 0;
 				maxObj   = null;
@@ -521,7 +523,7 @@ public class VisibilityGraph extends MapRepresentation {
 				for (VGNode k : nodesToCheck.keySet()) {
 					l = nodesToCheck.get(k);
 					
-					if (l.isEmpty()) {
+					if (l.isEmpty() || (!foundNodes.contains(k))) {
 						toRemove.add(k);
 					} else if (l.size() > maxSize) {
 						maxSize = l.size();
@@ -529,10 +531,12 @@ public class VisibilityGraph extends MapRepresentation {
 					}
 				}
 				
-				if (maxObj != null) {
+				if (maxObj == null) {
+					continueLoop = false;
+				} else {
 					for (VGNode n : nodesToCheck.get(maxObj))
 						foundNodes.remove(n);
-					nodesToCheck.remove(maxObj);
+					nodesToCheck.get(maxObj).clear();
 				}
 				
 				for (VGNode n : toRemove)

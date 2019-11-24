@@ -42,6 +42,12 @@ public class RRTPlanner extends Planner {
 	private boolean useBestEffort;
 	
 	/**
+	 * The maximum allowable distance between possibly interchangable points when trying to
+	 * salvage an existing path generating by this class' planning algorithm.
+	 */
+	private double salvageThreshold;
+	
+	/**
 	 * The pseudo-random number generator to use to generate the random points.
 	 */
 	private Random random;
@@ -52,11 +58,14 @@ public class RRTPlanner extends Planner {
 	 * other words, not discretized), as well as whether or not to use the best effort builder.
 	 * @param initialMapData The initial map data to use to build the representation.
 	 * @param useBestEffort Whether or not to use the best effort planning.
+	 * @param useBestEffort The threshold used for the salvaging routine.
 	 */
-	public RRTPlanner(MapData initialMapData, boolean useBestEffort) {
+	public RRTPlanner(MapData initialMapData, boolean useBestEffort, double salvageThreshold) {
 		super(new DiscretizedMap(1), initialMapData);
-		this.useBestEffort = useBestEffort;
-		this.random = new Random();
+		
+		this.useBestEffort    = useBestEffort;
+		this.salvageThreshold = salvageThreshold;
+		this.random           = new Random();
 	}
 	
 	/**
@@ -106,14 +115,13 @@ public class RRTPlanner extends Planner {
 				closestAngle    = closestNode.angleBetween(randomPosition);
 				
 				// Get the resulting position to check for a valid path between.
-				if (closestDistance < INTERP_DISTANCE) {
+				if (closestDistance < INTERP_DISTANCE)
 					interpolatedPosition = randomPosition;
-				} else {
+				else
 					interpolatedPosition = closestNode.position.translated(
 						INTERP_DISTANCE * Math.cos(closestAngle),
 						INTERP_DISTANCE * Math.sin(closestAngle)
 					);
-				}
 				
 				// Check if the path is clear and the last habitable position.
 				interpolationPair  = mapRep.pathIsClear(closestNode.position, interpolatedPosition);
@@ -176,6 +184,12 @@ public class RRTPlanner extends Planner {
 				// it's null and the loop exits.
 				toAdd = earliestConnection;
 			}
+			
+			// Set the original start and goal positions.
+			path.setOriginalStartAndGoal(
+				new Position2D(startNode.position),
+				new Position2D(finalNode.position)
+			);
 		}
 		
 		// Return the built and shortened path.
@@ -190,22 +204,17 @@ public class RRTPlanner extends Planner {
 		// If the old path is unable to be saved, don't try.
 		if (old != null) {
 			if (old.size() > 1) {
-				// A path can be salvaged if the second point in the path has a straight line
-				// path to the new start position, and if the second to last point in the path
-				// has a straight line path to the new goal position. If those paths are
-				// available, then slightly modify the path to substitute the new start and
-				// goal positions. There's more that can be done to salvage a path, but this
-				// seems a good balance between brevity and allowing for a new, more efficient
-				// path to be found as time passes.
+				// A path can be salvaged if it makes sense for it to be (in other words, if
+				// there isn't a direct line of sight between the new start and goal positions)
+				// and if the positions are within some predefined threshold.
 				DiscretizedMap mapRep = (DiscretizedMap)this.mapRepresentation;
-				SimpleEntry<Boolean, Position2D> s = mapRep.pathIsClear(newStart, old.getSecond());
-				SimpleEntry<Boolean, Position2D> g = mapRep.pathIsClear(newGoal, old.getSecondToLast());
-				if (s.getKey().booleanValue() && g.getKey().booleanValue()) {
-					old.removeFirst();
-					old.addFirst(newStart);
-					old.removeLast();
-					old.addLast(newGoal);
-					return true;
+				if (!mapRep.pathIsClear(newStart, newGoal).getKey().booleanValue()) {
+					if (newStart.equals(old.getOriginalStart(), this.salvageThreshold)
+							&& newGoal.equals(old.getOriginalGoal(), this.salvageThreshold)) {
+						old.removeLast();
+						old.addLast(newGoal);
+						return true;
+					}
 				}
 			}
 		}

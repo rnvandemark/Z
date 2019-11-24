@@ -111,12 +111,22 @@ public class Position2D extends Kinematic2D {
 	}
 	
 	/**
+	 * Checks for what's considered equality between a 2D position and another.
+	 * @param other The other position.
+	 * @param eps An epsilon threshold to consider equality with.
+	 * @return Whether or not the points can be considered equal.
+	 */
+	public boolean equals(Position2D other, double eps) {
+		return this.equals(other.x, other.y, eps);
+	}
+	
+	/**
 	 * Override from the {@link java.lang.Object} method.
 	 */
 	@Override
 	public boolean equals(Object obj) {
 		if (obj instanceof Position2D)
-			return this.equals(((Position2D) obj).x, ((Position2D) obj).y);
+			return this.equals(((Position2D)obj).x, ((Position2D)obj).y);
 		else
 			return false;
 	}
