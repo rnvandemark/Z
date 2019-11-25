@@ -165,8 +165,8 @@ public class SessionPanel extends ChildPanel {
 				);
 				
 				l = this.zombiePathsToDraw.get(i);
-				g2d.setColor(Color.RED);
 				if (l != null) {
+					g2d.setColor(Color.RED);
 					t = l.iterator();
 					p = t.next();
 					while (t.hasNext()) {

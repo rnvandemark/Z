@@ -21,9 +21,9 @@ import game.MapData;
  * A representation of an environment that uses a graph to describe what significant
  * points in the environment (in this case, vertices of obstacles) are visible by
  * others significant points. The underlying map is created with a discretized map so
- * took much detail doesn't drastically hurt the performance of the building routine.
+ * too much detail doesn't drastically hurt the performance of the building routine.
  * This class uses a generic "vertex detection" routine to be applicable to any
- * quality discretized map, while also removing redundancy in curved slanted surfaces
+ * quality discretized map, while also removing redundancy in curved/slanted surfaces
  * as best as possible.
  */
 public class VisibilityGraph extends MapRepresentation {
@@ -71,8 +71,8 @@ public class VisibilityGraph extends MapRepresentation {
 	 * that have already been found.
 	 * @param x The x position in the discretized map.
 	 * @param y The y position in the discretized map.
-	 * @param foundNodes A list of the nodes that have already been confirmed as
-	 * significant positions.
+	 * @param foundNodes A collection of the nodes that have already been confirmed
+	 * as significant positions.
 	 * @return An int describing the status. Those values can be:<br>
 	 * 		-1 if the [x,y] position is outside the bounds of the map,<br>
 	 * 		0 if the cell at [x,y] is unoccupied and therefore habitable,<br>
@@ -81,7 +81,7 @@ public class VisibilityGraph extends MapRepresentation {
 	 * 			an existing node,<br>
 	 * 		2 if the cell at [x,y] is already represented by a node.
 	 */
-	private int getStatusOf(int x, int y, ArrayList<VGNode> foundNodes) {
+	private int getStatusOf(int x, int y, Collection<VGNode> foundNodes) {
 		// Check to see if the position is in the bounds of the map.
 		if ((x >= 0) && (x < this.discMap.getWidth())
 				&& (y >= 0) && (y < this.discMap.getHeight())) {
@@ -93,12 +93,9 @@ public class VisibilityGraph extends MapRepresentation {
 			} else {
 				// It's occupied, check to see if it represents an existing node.
 				Position2D p = new Position2D(x, y);
-				
-				for (VGNode v : foundNodes) {
-					if (v.nearEqualTo(p)) {
+				for (VGNode v : foundNodes)
+					if (v.nearEqualTo(p))
 						return 2;
-					}
-				}
 				
 				// There's no node for this cell, either because it's not a
 				// vertex or it hasn't been found yet.
@@ -121,12 +118,13 @@ public class VisibilityGraph extends MapRepresentation {
 	 * inclusive, and can contain values describing the index of a cell relative
 	 * to the one described by x and y. If the cell at [x,y] is "P", then the
 	 * returned indices can be understood as:<br>
-	 * <br>
-	 * 0  |  1  |  2  <br>
-	 * -------------  <br>
-	 * 3  |  P  |  4  <br>
-	 * -------------  <br>
-	 * 5  |  6  |  7  <br>
+	 * 
+	 * 		 <br>
+	 * 		 0  |  1  |  2  <br>
+	 * 		 -------------  <br>
+	 *		 3  |  P  |  4  <br>
+	 *		 -------------  <br>
+	 *		 5  |  6  |  7  <br>
 	 */
 	private ArrayList<Integer> getOccupiedNeighbors(int x, int y, ArrayList<VGNode> foundNodes) {
 		// Populate an array with the statuses of a cell's neighboring cells.
@@ -239,10 +237,10 @@ public class VisibilityGraph extends MapRepresentation {
 						ArrayList<Integer> notIndices = new ArrayList<Integer>();
 						for (int i = 0; i < 8; i++)
 							if (!indices.contains((Integer)i))
-									notIndices.add(i);
+									notIndices.add((Integer)i);
 						
 						// Determine how the possible diagonal is pointed.
-						int dx, dy = 1;
+						int dx;
 						if (notIndices.containsAll(Arrays.asList(0, 1, 3))
 								|| notIndices.containsAll(Arrays.asList(4, 6, 7))) {
 							// The diagonal points down to the left.
@@ -271,7 +269,7 @@ public class VisibilityGraph extends MapRepresentation {
 						// time by searching there first.
 						while (stillDiagonal && (!foundExistingVertex)) {
 							newX -= dx;
-							newY -= dy;
+							newY--;
 							
 							if (this.getStatusOf(newX, newY, foundNodes) == 2) {
 								// A previously existing node was found.
@@ -298,7 +296,7 @@ public class VisibilityGraph extends MapRepresentation {
 						// Search forwards now, since an existing vertex wasn't found.
 						while (stillDiagonal && (!foundExistingVertex)) {
 							newX += dx;
-							newY += dy;
+							newY++;
 							
 							if (this.getStatusOf(newX, newY, foundNodes) == 2) {
 								// A previously existing node was found.
@@ -316,13 +314,12 @@ public class VisibilityGraph extends MapRepresentation {
 						if (foundExistingVertex)
 							break;
 						
-						
 						// Calculate the center point of the diagonal and make a new
 						// vertex out of it.
 						int minX = x + (itersBackward * -dx);
-						int minY = y + (itersBackward * -dy);
+						int minY = y - itersBackward;
 						int maxX = x + (itersForward * dx);
-						int maxY = y + (itersForward * dy);
+						int maxY = y + itersForward;
 						
 						newVertex = new Position2D(
 							minX + ((maxX - minX) / 2),
@@ -352,7 +349,7 @@ public class VisibilityGraph extends MapRepresentation {
 	 */
 	public void addEdgesFor(VGNode n, Collection<VGNode> allNodes) {
 		ArrayList<VGNode> existingDestinations = new ArrayList<VGNode>();
-		for (VGEdge e : this.nodeMap.get(n))
+		for (VGEdge e : this.getEdgesFor(n))
 			existingDestinations.add(e.destination);
 		
 		// Loop through all the nodes to look for possible connections.
@@ -388,7 +385,7 @@ public class VisibilityGraph extends MapRepresentation {
 		boolean result = true;
 		
 		// Remove all the edges leading to this node.
-		for (VGEdge e : this.nodeMap.get(n))
+		for (VGEdge e : this.getEdgesFor(n))
 			if (!this.nodeMap.get(e.destination).remove(n))
 				result = false;
 		
@@ -433,35 +430,43 @@ public class VisibilityGraph extends MapRepresentation {
 		
 		Graphics2D g2d = (Graphics2D)img.getGraphics();
 		
-		boolean found;
+		Set<VGNode> nodesSet = this.getNodeSet();
+		
+		Color c;
 		for (int i = 0; i < this.discMap.getWidth(); i++) {
 			for (int j = 0; j < this.discMap.getHeight(); j++) {
-				found = false;
-				
-				for (VGNode n : this.nodeMap.keySet()) {
-					if (n.nearEqualTo(new Position2D(i, j))) {
-						found = true;
+				c = null;
+				switch(this.getStatusOf(i, j, nodesSet)) {
+					case 2:
+						c = Color.RED;
 						break;
-					}
+					
+					case 1:
+						c = Color.DARK_GRAY;
+						break;
+					
+					case 0:
+						c = Color.WHITE;
+						break;
+					
+					default:
+						System.err.println("Illegal pixel status.");
+						return;
 				}
 				
-				if (found)
-					g2d.setColor(Color.RED);
-				else
-					g2d.setColor(this.discMap.openAt(i, j) ? Color.WHITE : Color.DARK_GRAY);
-				
+				g2d.setColor(c);
 				g2d.fillRect(i * dr, j * dr, dr, dr);
 			}
 		}
 		
 		g2d.setColor(Color.CYAN);
-		for (VGNode n : nodeMap.keySet())
-			for (VGEdge e : nodeMap.get(n))
+		for (VGNode n : nodesSet)
+			for (VGEdge e : this.getEdgesFor(n))
 				g2d.drawLine(
-					(int)n.position.x * dr,
-					(int)n.position.y * dr,
-					(int)e.destination.position.x * dr,
-					(int)e.destination.position.y * dr
+					((int)n.position.x * dr) + (dr / 2),
+					((int)n.position.y * dr) + (dr / 2),
+					((int)e.destination.position.x * dr) + (dr / 2),
+					((int)e.destination.position.y * dr) + (dr / 2)
 				);
 		
 		try {
@@ -480,7 +485,7 @@ public class VisibilityGraph extends MapRepresentation {
 	 */
 	@Override
 	public boolean build(MapData mapData) {
-		// Stop tying to build of the discretized map cannot be built.
+		// Stop trying to build if the discretized map cannot be built.
 		if (!this.discMap.build(mapData))
 			return false;
 		
