@@ -93,8 +93,18 @@ public abstract class AbstractDijkstraPlanner<TraversalMediumType> extends Plann
 	 * @param destination The second element.
 	 * @return The distance between the first and second element.
 	 */
-	protected abstract double distanceBetween(
+	protected abstract double distanceBetweenNeighbors(
 		TraversalMediumType source, TraversalMediumType destination);
+	
+	/**
+	 * Calculate the weight between the goal and some other specified element
+	 * according to the applied heuristic.
+	 * @param element The element to get the objective heuristic weight for.
+	 * @param goal The traversable element representing the goal.
+	 * @return The calculated heuristic weight for the element.
+	 */
+	protected abstract double calcHeuristicWeightFor(
+		TraversalMediumType element, TraversalMediumType goal);
 	
 	/**
 	 * Perform any necessary actions for after the path planning routine has
@@ -116,64 +126,63 @@ public abstract class AbstractDijkstraPlanner<TraversalMediumType> extends Plann
 		Couple<TraversalMediumType, TraversalMediumType> startAndGoal =
 			this.prepareGeneration(start, goal);
 		
-		// Get a collection of all the elements in the traversal medium.
-		Collection<TraversalMediumType> elementCollection =
-			this.getTraversalMediumCollection();
-		
 		// Initialize the container for the maps that this routine uses.
-		// TODO: Remove this from here and have this only built when
-		// necessary.
-		this.elementMap = new DijkstraHashMap(elementCollection);
+		// TODO: Remove this from here and have this only built when necessary.
+		this.elementMap = new DijkstraHashMap(this.getTraversalMediumCollection());
 		
-		// Initialize the distance heuristic to use.
+		// Initialize the tentative distances and heuristic weights to use.
 		if (!this.setInitialDistances(startAndGoal.first, startAndGoal.second))
 			return null;
 		
 		// Declare some reusable variables, and initialize the current
 		// element to start the main routine at.
-		TraversalMediumType nextElement, currentElement = startAndGoal.first;
-		double nextDistance, currentDistance, alternateDistance;
+		TraversalMediumType nextElement, currElement = startAndGoal.first;
+		double nextDist, currDist, altDist;
 		
 		// Perform this task until the goal node is marked as visited.
 		while (!this.elementMap.isVisited(startAndGoal.second)) {
 			// Get the shortest distance required to travel to this element
 			// as of now.
-			currentDistance = this.elementMap.getTentativeDistanceFor(currentElement);
+			currDist = this.elementMap.getTentativeDistanceFor(currElement);
 			
 			// Loop through and update the tentative distances for each of
 			// this element's neighbor.
-			for (TraversalMediumType neighbor : this.getNeighborsFor(currentElement)) {
-				alternateDistance = currentDistance + this.distanceBetween(currentElement, neighbor);
-				if (this.elementMap.getTentativeDistanceFor(neighbor) > alternateDistance) {
+			for (TraversalMediumType neighbor : this.getNeighborsFor(currElement)) {
+				altDist = currDist + this.distanceBetweenNeighbors(currElement, neighbor);
+				if (this.elementMap.getTentativeDistanceFor(neighbor) > altDist) {
 					// A shorter path to this neighboring element was found
-					// when this current element is the source. Update the map.
-					this.elementMap.setTentativeDistanceFor(neighbor, alternateDistance);
-					this.elementMap.setSourceElementFor(neighbor, currentElement);
+					// when this current element is the source. Update the maps.
+					this.elementMap.setSourceElementFor(neighbor, currElement);
+					this.elementMap.setTentativeDistanceFor(neighbor, altDist);
+					this.elementMap.setHeuristicWeightFor(
+						neighbor,
+						altDist + this.calcHeuristicWeightFor(neighbor, startAndGoal.second)
+					);
 				}
 			}
 			
 			// Mark this element as visited. If this wasn't the goal node, them
 			// figure out which element to visit next.
-			this.elementMap.markVisited(currentElement);
-			if (!currentElement.equals(startAndGoal.second)) {
-				nextDistance = Double.POSITIVE_INFINITY;
-				nextElement  = null;
+			this.elementMap.markVisited(currElement);
+			if (!currElement.equals(startAndGoal.second)) {
+				nextDist    = Double.POSITIVE_INFINITY;
+				nextElement = null;
 				
 				// Loop through each node to find the next element in a greedy
 				// fashion, by finding the shortest tentative distance for a
 				// node that hasn't been visited yet.
-				for (TraversalMediumType e : elementCollection) {
+				for (TraversalMediumType e : this.getTraversalMediumCollection()) {
 					if (!this.elementMap.isVisited(e)) {
-						alternateDistance = this.elementMap.getTentativeDistanceFor(e);
-						if (alternateDistance < nextDistance) {
-							nextElement  = e;
-							nextDistance = alternateDistance;
+						altDist = this.elementMap.getHeuristicWeightFor(e);
+						if (altDist < nextDist) {
+							nextElement = e;
+							nextDist    = altDist;
 						}
 					}
 				}
 				
 				// Finalize the next element to visit.
-				currentElement = nextElement;
+				currElement = nextElement;
 			}
 		}
 		
@@ -182,9 +191,9 @@ public abstract class AbstractDijkstraPlanner<TraversalMediumType> extends Plann
 		
 		// Given that we have the final element and a map describing each
 		// elements' source element, build the map backwards.
-		while (currentElement != null) {
-			path.addFirst(this.getPositionOf(currentElement));
-			currentElement = this.elementMap.getSourceElementFor(currentElement);
+		while (currElement != null) {
+			path.addFirst(this.getPositionOf(currElement));
+			currElement = this.elementMap.getSourceElementFor(currElement);
 		}
 		
 		// Include the original start and goal positions.
@@ -218,9 +227,11 @@ public abstract class AbstractDijkstraPlanner<TraversalMediumType> extends Plann
 	protected class DijkstraHashMap {
 		
 		/**
-		 * A map to maintain the tentative distance for each traversable element.
+		 * A map to maintain the source element that describes the previous
+		 * step of the shortest path back towards the start for each traversable
+		 * element.
 		 */
-		private HashMap<TraversalMediumType, Double> tentativeDistances;
+		private HashMap<TraversalMediumType, TraversalMediumType> sourceElement;
 		
 		/**
 		 * A map to maintain whether or not each traversable element has been
@@ -229,11 +240,14 @@ public abstract class AbstractDijkstraPlanner<TraversalMediumType> extends Plann
 		private HashMap<TraversalMediumType, Boolean> visited;
 		
 		/**
-		 * A map to maintain the source element that describes the previous
-		 * step of the shortest path back towards the start for each traversable
-		 * element.
+		 * A map to maintain the tentative distance for each traversable element.
 		 */
-		private HashMap<TraversalMediumType, TraversalMediumType> sourceElement;
+		private HashMap<TraversalMediumType, Double> tentativeDistances;
+		
+		/**
+		 * A map to maintain the current weighted values for the heuristic.
+		 */
+		private HashMap<TraversalMediumType, Double> heuristicWeight;
 		
 		/**
 		 * The sole constructor.
@@ -241,15 +255,17 @@ public abstract class AbstractDijkstraPlanner<TraversalMediumType> extends Plann
 		 * maps to initial states.
 		 * @param traversalMediumElements The collection of traversable elements.
 		 */
-		private DijkstraHashMap(Collection<TraversalMediumType> traversalMediumElements) {
-			this.tentativeDistances = new HashMap<TraversalMediumType, Double>();
-			this.visited            = new HashMap<TraversalMediumType, Boolean>();
+		protected DijkstraHashMap(Collection<TraversalMediumType> traversalMediumElements) {
 			this.sourceElement      = new HashMap<TraversalMediumType, TraversalMediumType>();
+			this.visited            = new HashMap<TraversalMediumType, Boolean>();
+			this.tentativeDistances = new HashMap<TraversalMediumType, Double>();
+			this.heuristicWeight    = new HashMap<TraversalMediumType, Double>();
 			
 			for (TraversalMediumType e : traversalMediumElements) {
-				this.tentativeDistances.put(e, 0.0);
-				this.visited.put(e, false);
 				this.sourceElement.put(e, null);
+				this.visited.put(e, false);
+				this.tentativeDistances.put(e, 0.0);
+				this.heuristicWeight.put(e, 0.0);
 			}
 		}
 		
@@ -282,6 +298,16 @@ public abstract class AbstractDijkstraPlanner<TraversalMediumType> extends Plann
 		}
 		
 		/**
+		 * Getter for the current heurisic weight of a specified traversable
+		 * element.
+		 * @param element The element to get current heuristic weight for.
+		 * @return The heuristic weight of the element.
+		 */
+		protected double getHeuristicWeightFor(TraversalMediumType element) {
+			return this.heuristicWeight.get(element).doubleValue();
+		}
+		
+		/**
 		 * Set the tentative distance for a traversable element.
 		 * @param element The element to set the tentative distance for.
 		 * @param distance The new tentative distance for some element.
@@ -305,6 +331,15 @@ public abstract class AbstractDijkstraPlanner<TraversalMediumType> extends Plann
 		 */
 		protected void setSourceElementFor(TraversalMediumType element, TraversalMediumType source) {
 			this.sourceElement.put(element, source);
+		}
+		
+		/**
+		 * Set the heuristic weight of a traversable element.
+		 * @param element The element to set the weight for.
+		 * @param weight The new weight for the specified element.
+		 */
+		protected void setHeuristicWeightFor(TraversalMediumType element, double weight) {
+			this.heuristicWeight.put(element, weight);
 		}
 	}
 }

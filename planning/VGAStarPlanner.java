@@ -5,13 +5,14 @@ import planning.VisibilityGraph.VGNode;
 
 /**
  * A version of a planner that utilizes a visibility graph to run
- * Dijkstra's algorithm with no heuristic (to be more specific, with
- * no weights guiding where the algorithm visits next in the traversable
- * medium). This class is not meant to be built off of, hence the final
- * modifier. Any other derivations should be built off of 
+ * Dijkstra's algorithm with a straight-line distance heuristic, so
+ * the algorithm favors next visiting traversable elements that are
+ * spatially closer in the environment's plane. This is commonly
+ * called A*. This class is not meant to be built off of, hence the
+ * final modifier. Any other derivations should be built off of
  * {@link planning.AbstractVGDijkstraPlanner}, like this class was.
  */
-public final class VGDijkstraPlanner extends AbstractVGDijkstraPlanner {
+public final class VGAStarPlanner extends AbstractVGDijkstraPlanner {
 	
 	/**
 	 * The sole constructor.
@@ -23,7 +24,7 @@ public final class VGDijkstraPlanner extends AbstractVGDijkstraPlanner {
 	 * @param initialMapData The data to first build the visibility
 	 * graph with.
 	 */
-	public VGDijkstraPlanner(
+	public VGAStarPlanner(
 			int discretizationRatio,
 			double cleanlinessThreshold,
 			MapData initialMapData) {
@@ -43,7 +44,9 @@ public final class VGDijkstraPlanner extends AbstractVGDijkstraPlanner {
 			
 			this.elementMap.setHeuristicWeightFor(
 				e,
-				e.equals(start) ? 0.0 : Double.POSITIVE_INFINITY
+				e.equals(start)
+					? this.calcHeuristicWeightFor(e, goal)
+					: Double.POSITIVE_INFINITY
 			);
 		}
 		
@@ -55,6 +58,6 @@ public final class VGDijkstraPlanner extends AbstractVGDijkstraPlanner {
 	 */
 	@Override
 	protected double calcHeuristicWeightFor(VGNode element, VGNode goal) {
-		return 0.0;
+		return element.getPosition().distanceBetween(goal.getPosition());
 	}
 }
