@@ -194,7 +194,7 @@ public class SessionPanel extends ChildPanel {
 	public SessionPanelController getSessionPanelController() {
 		return this.controller;
 	}
-
+	
 	/**
 	 * Override from the {@link javax.swing.JComponent} method.
 	 */

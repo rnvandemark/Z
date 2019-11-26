@@ -349,8 +349,11 @@ public class VisibilityGraph extends MapRepresentation {
 	 */
 	public void addEdgesFor(VGNode n, Collection<VGNode> allNodes) {
 		ArrayList<VGNode> existingDestinations = new ArrayList<VGNode>();
-		for (VGEdge e : this.getEdgesFor(n))
-			existingDestinations.add(e.destination);
+		if (this.nodeMap.containsKey(n))
+			for (VGEdge e : this.getEdgesFor(n))
+				existingDestinations.add(e.destination);
+		else
+			this.nodeMap.put(n, new VGEdgeList());
 		
 		// Loop through all the nodes to look for possible connections.
 		for (VGNode o : allNodes) {
@@ -566,7 +569,7 @@ public class VisibilityGraph extends MapRepresentation {
 	/**
 	 * A simple helper class to represent a node in the graph.
 	 */
-	public class VGNode {
+	public static class VGNode {
 		
 		/**
 		 * The position that this node has in the graph.
@@ -578,7 +581,7 @@ public class VisibilityGraph extends MapRepresentation {
 		 * Simply takes a position.
 		 * @param position This node's position.
 		 */
-		private VGNode(Position2D position) {
+		public VGNode(Position2D position) {
 			this.position = position;
 		}
 		
@@ -587,7 +590,7 @@ public class VisibilityGraph extends MapRepresentation {
 		 * @param n The other node.
 		 * @return The distance between this and the other node.
 		 */
-		private double distanceBetween(VGNode n) {
+		public double distanceBetween(VGNode n) {
 			return this.position.distanceBetween(n.position);
 		}
 		
@@ -597,8 +600,17 @@ public class VisibilityGraph extends MapRepresentation {
 		 * @return Whether or not this node's position and the other can be
 		 * considered equal.
 		 */
-		private boolean nearEqualTo(Position2D p) {
+		public boolean nearEqualTo(Position2D p) {
 			return this.position.equals(p);
+		}
+		
+		/**
+		 * Getter for the position of this node relative to the underlying
+		 * discretized map.
+		 * @return This node's position.
+		 */
+		public Position2D getPosition() {
+			return this.position;
 		}
 
 		/**
@@ -625,7 +637,7 @@ public class VisibilityGraph extends MapRepresentation {
 	 * A simple helper class to objectify the edges between two nodes, including
 	 * the destination node and the weight between them.
 	 */
-	public class VGEdge {
+	public static class VGEdge {
 		
 		/**
 		 * The "cost" for traversing the connection between this node and the
@@ -645,7 +657,7 @@ public class VisibilityGraph extends MapRepresentation {
 		 * @param weight The weight for traversal.
 		 * @param destination The node that traversing this edge leads to.
 		 */
-		private VGEdge(double weight, VGNode destination) {
+		public VGEdge(double weight, VGNode destination) {
 			this.weight      = weight;
 			this.destination = destination;
 		}
@@ -670,7 +682,7 @@ public class VisibilityGraph extends MapRepresentation {
 	/*
 	 * A simple helper class to represent an array list of graph edges.
 	 */
-	public class VGEdgeList extends ArrayList<VGEdge> {
+	public static class VGEdgeList extends ArrayList<VGEdge> {
 		
 		/**
 		 * A generated serial version number for this serializable object.
@@ -680,18 +692,17 @@ public class VisibilityGraph extends MapRepresentation {
 		/**
 		 * A helper function to remove an edge given its destination node.
 		 * @param n The destination node of the edge to remove.
-		 * @return Whether or not the destination node's edge was
-		 * successfully removed.
+		 * @return Whether or not the destination node's edge was successfully
+		 * removed.
 		 */
-		private boolean remove(VGNode n) {
+		public boolean remove(VGNode n) {
 			Iterator<VGEdge> iter = this.iterator();
 			
 			VGEdge e;
 			while (iter.hasNext()) {
 				e = iter.next();
 				if (e.destination.equals(n)) {
-					this.remove(e);
-					return true;
+					return this.remove(e);
 				}
 			}
 			
