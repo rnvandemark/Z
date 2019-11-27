@@ -6,7 +6,7 @@ import java.awt.event.WindowEvent;
 
 import game.MapData;
 import planning.IPlanning;
-import planning.RRTPlanner;
+import planning.VGAStarPlanner;
 
 /**
  * The controller class for the MainFrame graphics class. This contains the code for all
@@ -69,12 +69,12 @@ public class MainFrameController implements KeyListener {
 	public void startSession(String dirURL) {
 		this.parent.setSessionRelatedPanels(dirURL);
 		
-		IPlanning.setZombiesPlannerType(RRTPlanner.class);
+		IPlanning.setZombiesPlannerType(VGAStarPlanner.class);
 		if (!IPlanning.renewZombiesPlanner(
-				new Class<?>[]{MapData.class, boolean.class, double.class},
-				this.parent.getSessionPanel().getSession().getMapData(),
-				true,
-				30.0
+				new Class<?>[]{int.class, double.class, MapData.class},
+				4,
+				4.25,
+				this.parent.getSessionPanel().getSession().getMapData()
 		)) {
 			throw new RuntimeException("Failed to set the Zombies path planner.");
 		}

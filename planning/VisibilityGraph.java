@@ -83,9 +83,7 @@ public class VisibilityGraph extends MapRepresentation {
 	 */
 	private int getStatusOf(int x, int y, Collection<VGNode> foundNodes) {
 		// Check to see if the position is in the bounds of the map.
-		if ((x >= 0) && (x < this.discMap.getWidth())
-				&& (y >= 0) && (y < this.discMap.getHeight())) {
-			
+		if (this.discMap.isInBounds(x, y)) {
 			// The cell is in bounds, check to see if it's occupied.
 			if (this.discMap.openAt(x, y)) {
 				// It's unoccupied.

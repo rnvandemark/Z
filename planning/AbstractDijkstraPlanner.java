@@ -126,9 +126,13 @@ public abstract class AbstractDijkstraPlanner<TraversalMediumType> extends Plann
 		Couple<TraversalMediumType, TraversalMediumType> startAndGoal =
 			this.prepareGeneration(start, goal);
 		
+		// Get a collection of all the elements in the traversal medium.
+		Collection<TraversalMediumType> elementCollection =
+			this.getTraversalMediumCollection();
+		
 		// Initialize the container for the maps that this routine uses.
 		// TODO: Remove this from here and have this only built when necessary.
-		this.elementMap = new DijkstraHashMap(this.getTraversalMediumCollection());
+		this.elementMap = new DijkstraHashMap(elementCollection);
 		
 		// Initialize the tentative distances and heuristic weights to use.
 		if (!this.setInitialDistances(startAndGoal.first, startAndGoal.second))
@@ -171,7 +175,7 @@ public abstract class AbstractDijkstraPlanner<TraversalMediumType> extends Plann
 				// Loop through each node to find the next element in a greedy
 				// fashion, by finding the shortest tentative distance for a
 				// node that hasn't been visited yet.
-				for (TraversalMediumType e : this.getTraversalMediumCollection()) {
+				for (TraversalMediumType e : elementCollection) {
 					if (!this.elementMap.isVisited(e)) {
 						altDist = this.elementMap.getHeuristicWeightFor(e);
 						if (altDist < nextDist) {
@@ -270,12 +274,12 @@ public abstract class AbstractDijkstraPlanner<TraversalMediumType> extends Plann
 		}
 		
 		/**
-		 * Getter for the tentative distance of an element.
-		 * @param element The element to get the tentative distance for,
-		 * @return The tentative distance of the element.
+		 * Getter for the source element of a specified traversable element.
+		 * @param element The element to get the source element of.
+		 * @return The source element for the element.
 		 */
-		protected double getTentativeDistanceFor(TraversalMediumType element) {
-			return this.tentativeDistances.get(element).doubleValue();
+		protected TraversalMediumType getSourceElementFor(TraversalMediumType element) {
+			return this.sourceElement.get(element);
 		}
 		
 		/**
@@ -289,12 +293,12 @@ public abstract class AbstractDijkstraPlanner<TraversalMediumType> extends Plann
 		}
 		
 		/**
-		 * Getter for the source element of a specified traversable element.
-		 * @param element The element to get the source element of.
-		 * @return The source element for the element.
+		 * Getter for the tentative distance of an element.
+		 * @param element The element to get the tentative distance for,
+		 * @return The tentative distance of the element.
 		 */
-		protected TraversalMediumType getSourceElementFor(TraversalMediumType element) {
-			return this.sourceElement.get(element);
+		protected double getTentativeDistanceFor(TraversalMediumType element) {
+			return this.tentativeDistances.get(element).doubleValue();
 		}
 		
 		/**
@@ -308,12 +312,12 @@ public abstract class AbstractDijkstraPlanner<TraversalMediumType> extends Plann
 		}
 		
 		/**
-		 * Set the tentative distance for a traversable element.
-		 * @param element The element to set the tentative distance for.
-		 * @param distance The new tentative distance for some element.
+		 * Set the source element of some other traversable element.
+		 * @param element The element to the source of.
+		 * @param source The new source element for the first element.
 		 */
-		protected void setTentativeDistanceFor(TraversalMediumType element, double distance) {
-			this.tentativeDistances.put(element, (Double)distance);
+		protected void setSourceElementFor(TraversalMediumType element, TraversalMediumType source) {
+			this.sourceElement.put(element, source);
 		}
 		
 		/**
@@ -325,12 +329,12 @@ public abstract class AbstractDijkstraPlanner<TraversalMediumType> extends Plann
 		}
 		
 		/**
-		 * Set the source element of some other traversable element.
-		 * @param element The element to the source of.
-		 * @param source The new source element for the first element.
+		 * Set the tentative distance for a traversable element.
+		 * @param element The element to set the tentative distance for.
+		 * @param distance The new tentative distance for some element.
 		 */
-		protected void setSourceElementFor(TraversalMediumType element, TraversalMediumType source) {
-			this.sourceElement.put(element, source);
+		protected void setTentativeDistanceFor(TraversalMediumType element, double distance) {
+			this.tentativeDistances.put(element, (Double)distance);
 		}
 		
 		/**

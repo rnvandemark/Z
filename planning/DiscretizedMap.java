@@ -115,6 +115,18 @@ public class DiscretizedMap extends MapRepresentation {
 	}
 	
 	/**
+	 * A helper function to check whether or not an [x,y] coordinate pair is within the
+	 * bounds of this map.
+	 * @param x The x coordinate.
+	 * @param y The y coordinate.
+	 * @return Whether or not the provided coordinates are within the bounds of this map.
+	 */
+	public boolean isInBounds(int x, int y) {
+		return ((x >= 0) && (x < this.getWidth())
+			&& (y >= 0) && (y < this.getHeight()));
+	}
+	
+	/**
 	 * Checks whether or not the straight line path between the start and goal position is
 	 * completely clear of obstacles, with a default discretization distance.
 	 * @param start The start position of the map.
