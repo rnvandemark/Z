@@ -90,6 +90,28 @@ public class Position2D extends Kinematic2D {
 	}
 	
 	/**
+	 * Scale the current x and y values by a specified factor.
+	 * @param fx The scaling factor for the x-axis.
+	 * @param fy The scaling factor for the y-axis.
+	 */
+	public void scale(double fx, double fy) {
+		this.set(this.x * fx , this.y * fy);
+	}
+	
+	/**
+	 * Create a new position that is a scale of the current x and y values by a specified
+	 * factor.
+	 * @param fx The scaling factor for the x-axis.
+	 * @param fy The scaling factor for the y-axis.
+	 * @return The new sacled position.
+	 */
+	public Position2D scaled(double fx, double fy) {
+		Position2D p = new Position2D(this);
+		p.scale(fx, fy);
+		return p;
+	}
+	
+	/**
 	 * Checks for what's considered equality between a 2D position and an x,y coordinate pair.
 	 * @param px The other x-coordinate.
 	 * @param py The other y-coordinate.

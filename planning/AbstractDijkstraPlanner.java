@@ -24,6 +24,13 @@ public abstract class AbstractDijkstraPlanner<TraversalMediumType> extends Plann
 	 * routine.
 	 */
 	protected DijkstraHashMap elementMap;
+
+	/**
+	 * The maximum allowable distance between possibly interchangable points
+	 * when trying to salvage an existing path generating by this class'
+	 * planning algorithm.
+	 */
+	protected double salvageThreshold;
 	
 	/**
 	 * The sole constructor.
@@ -32,13 +39,24 @@ public abstract class AbstractDijkstraPlanner<TraversalMediumType> extends Plann
 	 * hence the parameterization that this class has.
 	 * @param mapRepresenation The map representation to use.
 	 * @param initialMapData The map data to first build the map
+	 * @param salvageThreshold The threshold used for the salvaging routine.
 	 * representation with.
 	 */
 	protected AbstractDijkstraPlanner(
-			MapRepresentation mapRepresenation, MapData initialMapData) {
+			MapRepresentation mapRepresenation, MapData initialMapData, double salvageThreshold) {
 		super(mapRepresenation, initialMapData);
-		this.elementMap = null;
+		this.elementMap       = null;
+		this.salvageThreshold = salvageThreshold;
 	}
+	
+	/**
+	 * Get whether or not a simple path is clear between the start and goal
+	 * positions for the path being generated.
+	 * @param start The starting position for path planning.
+	 * @param goal The goal position for path planning.
+	 * @return Whether or not the path is completely clear.
+	 */
+	protected abstract boolean pathIsClear(Position2D start, Position2D goal);
 	
 	/**
 	 * Given an instance of the traversable medium for this derived instance
@@ -71,10 +89,14 @@ public abstract class AbstractDijkstraPlanner<TraversalMediumType> extends Plann
 	 * the initial distances for all of the traversable nodes.
 	 * @param start The starting position for path planning.
 	 * @param goal The goal position for path planning.
+	 * @param elements A list of all of the elements to set distances for.
 	 * @return Whether or not the distances were set without error.
 	 */
 	protected abstract boolean setInitialDistances(
-		TraversalMediumType start, TraversalMediumType goal);
+		TraversalMediumType start,
+		TraversalMediumType goal,
+		Collection<TraversalMediumType> elements
+	);
 	
 	/**
 	 * Get a collection of the elements that are some source element's
@@ -122,93 +144,119 @@ public abstract class AbstractDijkstraPlanner<TraversalMediumType> extends Plann
 	 */
 	@Override
 	public PlannedPath generatePath(Position2D start, Position2D goal) {
-		// Generate the start and goal elements.
-		Couple<TraversalMediumType, TraversalMediumType> startAndGoal =
-			this.prepareGeneration(start, goal);
+		// Start building a path.
+		PlannedPath path = null;
 		
-		// Get a collection of all the elements in the traversal medium.
-		Collection<TraversalMediumType> elementCollection =
-			this.getTraversalMediumCollection();
-		
-		// Initialize the container for the maps that this routine uses.
-		// TODO: Remove this from here and have this only built when necessary.
-		this.elementMap = new DijkstraHashMap(elementCollection);
-		
-		// Initialize the tentative distances and heuristic weights to use.
-		if (!this.setInitialDistances(startAndGoal.first, startAndGoal.second))
-			return null;
-		
-		// Declare some reusable variables, and initialize the current
-		// element to start the main routine at.
-		TraversalMediumType nextElement, currElement = startAndGoal.first;
-		double nextDist, currDist, altDist;
-		
-		// Perform this task until the goal node is marked as visited.
-		while (!this.elementMap.isVisited(startAndGoal.second)) {
-			// Get the shortest distance required to travel to this element
-			// as of now.
-			currDist = this.elementMap.getTentativeDistanceFor(currElement);
+		if (this.pathIsClear(start, goal)) {
+			// There exists a straight-line path.
+			path = new PlannedPath();
 			
-			// Loop through and update the tentative distances for each of
-			// this element's neighbor.
-			for (TraversalMediumType neighbor : this.getNeighborsFor(currElement)) {
-				altDist = currDist + this.distanceBetweenNeighbors(currElement, neighbor);
-				if (this.elementMap.getTentativeDistanceFor(neighbor) > altDist) {
-					// A shorter path to this neighboring element was found
-					// when this current element is the source. Update the maps.
-					this.elementMap.setSourceElementFor(neighbor, currElement);
-					this.elementMap.setTentativeDistanceFor(neighbor, altDist);
-					this.elementMap.setHeuristicWeightFor(
-						neighbor,
-						altDist + this.calcHeuristicWeightFor(neighbor, startAndGoal.second)
-					);
+			// Because of the nature of the underlying map, ensure that the last
+			// position is actually near the target player by sending the original
+			// goal position and not a discretized version of it.
+			path.addFirst(start);
+			path.addLast(goal);
+			
+			// Include the original start and goal positions.
+			path.setOriginalStartAndGoal(start, goal);
+		} else {
+			// Generate the start and goal elements.
+			Couple<TraversalMediumType, TraversalMediumType> startAndGoal =
+				this.prepareGeneration(start, goal);
+			
+			// Get a collection of all the elements in the traversal medium.
+			Collection<TraversalMediumType> elementCollection = this.getTraversalMediumCollection();
+			
+			// Initialize the container for the maps that this routine uses.
+			// TODO: Remove this from here and have this only built when necessary.
+			this.elementMap = new DijkstraHashMap(elementCollection);
+			
+			// Initialize the tentative distances and heuristic weights to use.
+			if (!this.setInitialDistances(startAndGoal.first, startAndGoal.second, elementCollection))
+				return null;
+			
+			// Declare some reusable variables, and initialize the current
+			// element to start the main routine at.
+			TraversalMediumType nextElement, currElement = startAndGoal.first;
+			double nextDist, currDist, altDist;
+			
+			// Perform this task until the goal node is marked as visited or
+			// completely failed.
+			boolean foundPath = true;
+			while (!this.elementMap.isVisited(startAndGoal.second)) {
+				if (currElement == null) {
+					foundPath = false;
+					break;
 				}
-			}
-			
-			// Mark this element as visited. If this wasn't the goal node, them
-			// figure out which element to visit next.
-			this.elementMap.markVisited(currElement);
-			if (!currElement.equals(startAndGoal.second)) {
-				nextDist    = Double.POSITIVE_INFINITY;
-				nextElement = null;
 				
-				// Loop through each node to find the next element in a greedy
-				// fashion, by finding the shortest tentative distance for a
-				// node that hasn't been visited yet.
-				for (TraversalMediumType e : elementCollection) {
-					if (!this.elementMap.isVisited(e)) {
-						altDist = this.elementMap.getHeuristicWeightFor(e);
-						if (altDist < nextDist) {
-							nextElement = e;
-							nextDist    = altDist;
-						}
+				// Get the shortest distance required to travel to this element
+				// as of now.
+				currDist = this.elementMap.getTentativeDistanceFor(currElement);
+				
+				// Loop through and update the tentative distances for each of
+				// this element's neighbor.
+				
+				for (TraversalMediumType neighbor : this.getNeighborsFor(currElement)) {
+					altDist = currDist + this.distanceBetweenNeighbors(currElement, neighbor);
+					if (this.elementMap.getTentativeDistanceFor(neighbor) > altDist) {
+						// A shorter path to this neighboring element was found
+						// when this current element is the source. Update the maps.
+						this.elementMap.setSourceElementFor(neighbor, currElement);
+						this.elementMap.setTentativeDistanceFor(neighbor, altDist);
+						this.elementMap.setHeuristicWeightFor(
+							neighbor,
+							altDist + this.calcHeuristicWeightFor(neighbor, startAndGoal.second)
+						);
 					}
 				}
 				
-				// Finalize the next element to visit.
-				currElement = nextElement;
+				// Mark this element as visited. If this wasn't the goal node, them
+				// figure out which element to visit next.
+				this.elementMap.markVisited(currElement);
+				if (!currElement.equals(startAndGoal.second)) {
+					nextDist    = Double.POSITIVE_INFINITY;
+					nextElement = null;
+					
+					// Loop through each node to find the next element in a greedy
+					// fashion, by finding the shortest tentative distance for a
+					// node that hasn't been visited yet.
+					for (TraversalMediumType e : elementCollection) {
+						if (!this.elementMap.isVisited(e)) {
+							altDist = this.elementMap.getHeuristicWeightFor(e);
+							if (altDist < nextDist) {
+								nextElement = e;
+								nextDist    = altDist;
+							}
+						}
+					}
+					
+					// Finalize the next element to visit.
+					currElement = nextElement;
+				}
+			}
+			
+			if (foundPath) {
+				// There exists an optimal path.
+				path = new PlannedPath();
+				
+				// Given that we have the final element and a map describing each
+				// elements' source element, build the map backwards.
+				while (currElement != null) {
+					path.addFirst(this.getPositionOf(currElement));
+					currElement = this.elementMap.getSourceElementFor(currElement);
+				}
+				
+				// Include the original start and goal positions.
+				path.setOriginalStartAndGoal(
+					this.getPositionOf(startAndGoal.first),
+					this.getPositionOf(startAndGoal.second)
+				);
+				
+				// Ensure any closing routine is performed successfully.
+				if (!this.closeGeneration(startAndGoal.first, startAndGoal.second))
+					throw new RuntimeException("Failed to properly close path generation.");
 			}
 		}
-		
-		// Start building a path.
-		PlannedPath path = new PlannedPath();
-		
-		// Given that we have the final element and a map describing each
-		// elements' source element, build the map backwards.
-		while (currElement != null) {
-			path.addFirst(this.getPositionOf(currElement));
-			currElement = this.elementMap.getSourceElementFor(currElement);
-		}
-		
-		// Include the original start and goal positions.
-		path.setOriginalStartAndGoal(
-			this.getPositionOf(startAndGoal.first),
-			this.getPositionOf(startAndGoal.second)
-		);
-		
-		// Ensure any closing routine is performed successfully.
-		if (!this.closeGeneration(startAndGoal.first, startAndGoal.second))
-			throw new RuntimeException("Failed to properly close path generation.");
 		
 		// Finished, return the path.
 		return path;
@@ -219,6 +267,17 @@ public abstract class AbstractDijkstraPlanner<TraversalMediumType> extends Plann
 	 */
 	@Override
 	public boolean salvagePath(PlannedPath old, Position2D newStart, Position2D newGoal) {
+		if (old != null) {
+			if (old.size() > 2) {
+				if (newStart.distanceBetween(old.getOriginalStart()) < this.salvageThreshold
+					&& newGoal.distanceBetween(old.getOriginalGoal()) < this.salvageThreshold) {
+					old.removeLast();
+					old.addLast(newGoal);
+					return true;
+				}
+			}
+		}
+		
 		return false;
 	}
 	
@@ -302,7 +361,7 @@ public abstract class AbstractDijkstraPlanner<TraversalMediumType> extends Plann
 		}
 		
 		/**
-		 * Getter for the current heurisic weight of a specified traversable
+		 * Getter for the current heuristic weight of a specified traversable
 		 * element.
 		 * @param element The element to get current heuristic weight for.
 		 * @return The heuristic weight of the element.

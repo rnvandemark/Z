@@ -13,7 +13,7 @@ public class Couple<T1, T2> {
 	public T1 first;
 	
 	/**
-	 * Some onject that acts as the second element in the tuple.
+	 * Some object that acts as the second element in the tuple.
 	 */
 	public T2 second;
 	

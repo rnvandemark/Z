@@ -379,7 +379,7 @@ public class SessionPanelController
 						z = currentWave.getZombieAt(i);
 						p = currentWave.getZombiePathAt(i);
 						currentPositions[i]  = z == null ? null : z.getPosition();
-						currentPaths[i]      = p == null ? null : p;
+						currentPaths[i]      = p;
 						recalculatedPaths[i] = false;
 					}
 					setValues = true;

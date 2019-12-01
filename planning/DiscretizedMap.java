@@ -2,10 +2,10 @@ package planning;
 
 import java.awt.Color;
 import java.awt.image.BufferedImage;
-import java.util.AbstractMap.SimpleEntry;
 
 import actors.Position2D;
 import game.MapData;
+import util.Couple;
 
 /**
  * A type of map representation that takes the black and white data of a map and creates a
@@ -48,6 +48,40 @@ public class DiscretizedMap extends MapRepresentation {
 	}
 	
 	/**
+	 * A helper function to check whether or not an [x,y] coordinate pair is within the
+	 * bounds of this map.
+	 * @param x The x coordinate.
+	 * @param y The y coordinate.
+	 * @return Whether or not the provided coordinates are within the bounds of this map.
+	 */
+	public boolean isInBounds(int x, int y) {
+		return ((x >= 0) && (x < this.getWidth())
+			&& (y >= 0) && (y < this.getHeight()));
+	}
+	
+	/**
+	 * Getter for whether or not a cell at the discretized coordinate pair x and y is habitable
+	 * by an actor.
+	 * @param x The x coordinate of the discretized map.
+	 * @param y The y coordinate of the discretized map.
+	 * @return True if the cell at this position can be inhabited by an actor, false otherwise.
+	 */
+	public boolean openAt(int x, int y) {
+		return !cells[x][y];
+	}
+	
+	/**
+	 * Getter for whether or not a cell at the coordinate pair x and y of the original map image
+	 * is habitable by an actor.
+	 * @param x The x coordinate of the original map.
+	 * @param y The y coordinate of the original map.
+	 * @return True if the cell at this position can be inhabited by an actor, false otherwise.
+	 */
+	public boolean openAtOriginal(int x, int y) {
+		return this.openAt(x / this.discretizationRatio, y / this.discretizationRatio);
+	}
+	
+	/**
 	 * Checks whether or not the straight line path between the start and goal position is
 	 * completely clear of obstacles.
 	 * @param start The start position of the map.
@@ -60,9 +94,8 @@ public class DiscretizedMap extends MapRepresentation {
 	 * clear, the second position is equivalent to the goal position. If not, the last valid
 	 * point is returned.
 	 */
-	public SimpleEntry<Boolean, Position2D> pathIsClear(
-			Position2D start, Position2D goal, double exclusionThreshold, double stepDistance
-	) {
+	public Couple<Boolean, Position2D> pathIsClear(
+			Position2D start, Position2D goal, double exclusionThreshold, double stepDistance) {
 		double stepAngle     = start.angleBetween(goal);
 		double totalDistance = start.distanceBetween(goal);
 		
@@ -111,19 +144,7 @@ public class DiscretizedMap extends MapRepresentation {
 				furthestValid.set(goal);
 		}
 		
-		return new SimpleEntry<Boolean, Position2D>(exitStatus == 2, furthestValid);
-	}
-	
-	/**
-	 * A helper function to check whether or not an [x,y] coordinate pair is within the
-	 * bounds of this map.
-	 * @param x The x coordinate.
-	 * @param y The y coordinate.
-	 * @return Whether or not the provided coordinates are within the bounds of this map.
-	 */
-	public boolean isInBounds(int x, int y) {
-		return ((x >= 0) && (x < this.getWidth())
-			&& (y >= 0) && (y < this.getHeight()));
+		return new Couple<Boolean, Position2D>(exitStatus == 2, furthestValid);
 	}
 	
 	/**
@@ -138,7 +159,7 @@ public class DiscretizedMap extends MapRepresentation {
 	 * clear, the second position is equivalent to the goal position. If not, the last valid
 	 * point is returned.
 	 */
-	public SimpleEntry<Boolean, Position2D> pathIsClear(
+	public Couple<Boolean, Position2D> pathIsClear(
 			Position2D start, Position2D goal, double exclusionThreshold) {
 		return this.pathIsClear(
 			start,
@@ -159,30 +180,72 @@ public class DiscretizedMap extends MapRepresentation {
 	 * clear, the second position is equivalent to the goal position. If not, the last valid
 	 * point is returned.
 	 */
-	public SimpleEntry<Boolean, Position2D> pathIsClear(Position2D start, Position2D goal) {
+	public Couple<Boolean, Position2D> pathIsClear(Position2D start, Position2D goal) {
 		return this.pathIsClear(start, goal, -1);
 	}
 	
 	/**
-	 * Getter for whether or not a cell at the discretized coordinate pair x and y is habitable
-	 * by an actor.
-	 * @param x The x coordinate of the discretized map.
-	 * @param y The y coordinate of the discretized map.
-	 * @return True if the cell at this position can be inhabited by an actor, false otherwise.
+	 * Checks whether or not the straight line path between the start and goal position is
+	 * completely clear of obstacles, in the domain of the original map's dimensions.
+	 * @param start The start position of the original map.
+	 * @param goal The goal position of the original map.
+	 * @param exclusionThreshold The distance away from the start and goal positions that are
+	 * ignored when checking for obstacle collisions in the domain of the original map's
+	 * dimensions.
+	 * @param stepDistance The distance to interpolate by for each check.
+	 * @return An effective tuple of size two, the first value being whether or not the entire
+	 * path is clear, the second being the furthest valid position. If the path is completely
+	 * clear, the second position is equivalent to the goal position. If not, the last valid
+	 * point is returned.
 	 */
-	public boolean openAt(int x, int y) {
-		return !cells[x][y];
+	public Couple<Boolean, Position2D> pathIsClearInOriginal(
+			Position2D start, Position2D goal, double exclusionThreshold, double stepDistance) {
+		double scale = 1.0 / this.discretizationRatio;
+		return this.pathIsClear(
+			start.scaled(scale, scale),
+			goal.scaled(scale, scale),
+			exclusionThreshold,
+			stepDistance
+		);
 	}
 	
 	/**
-	 * Getter for whether or not a cell at the coordinate pair x and y of the original map image
-	 * is habitable by an actor.
-	 * @param x The x coordinate of the original map.
-	 * @param y The y coordinate of the original map.
-	 * @return True if the cell at this position can be inhabited by an actor, false otherwise.
+	 * Checks whether or not the straight line path between the start and goal position is
+	 * completely clear of obstacles, with a default discretization distance, in the domain
+	 * of the original map's domain.
+	 * @param start The start position of the original map.
+	 * @param goal The goal position of the original map.
+	 * @param exclusionThreshold The distance away from the start and goal positions that are
+	 * ignored when checking for obstacle collisions.
+	 * @return An effective tuple of size two, the first value being whether or not the entire
+	 * path is clear, the second being the furthest valid position. If the path is completely
+	 * clear, the second position is equivalent to the goal position. If not, the last valid
+	 * point is returned.
 	 */
-	public boolean openAtOriginal(int x, int y) {
-		return this.openAt(x / this.discretizationRatio, y / this.discretizationRatio);
+	public Couple<Boolean, Position2D> pathIsClearInOriginal(
+			Position2D start, Position2D goal, double exclusionThreshold) {
+		return this.pathIsClearInOriginal(
+			start,
+			goal,
+			exclusionThreshold,
+			DEFAULT_DISC_DISTANCE_RATIO
+		);
+	}
+	
+	/**
+	 * Checks whether or not the straight line path between the start and goal position is
+	 * completely clear of obstacles, with a default discretization distance, and ignoring
+	 * an exclusion threshold, in the domain of the original map's dimensions.
+	 * @param start The start position of the original map.
+	 * @param goal The goal position of the original map.
+	 * @return An effective tuple of size two, the first value being whether or not the entire
+	 * path is clear, the second being the furthest valid position. If the path is completely
+	 * clear, the second position is equivalent to the goal position. If not, the last valid
+	 * point is returned.
+	 */
+	public Couple<Boolean, Position2D> pathIsClearInOriginal(
+			Position2D start, Position2D goal) {
+		return this.pathIsClearInOriginal(start, goal, -1);
 	}
 	
 	/**

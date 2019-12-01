@@ -29,12 +29,25 @@ public abstract class AbstractVGDijkstraPlanner
 	 * @param cleanlinessThreshold The threshold that defines the degree to which
 	 * the clean up procedure should look for redundant nodes.
 	 * @param initialMapData The map data used for initializing the planner.
+	 * @param salvageThreshold The threshold used for the salvaging routine.
 	 */
 	public AbstractVGDijkstraPlanner(
-			int discretizationRatio, double cleanlinessThreshold, MapData initialMapData) {
+			int discretizationRatio,
+			double cleanlinessThreshold,
+			MapData initialMapData,
+			double salvageThreshold) {
 		super(
 			new VisibilityGraph(discretizationRatio, cleanlinessThreshold),
-			initialMapData
+			initialMapData,
+			salvageThreshold
+		);
+	}
+	
+	@Override
+	protected boolean pathIsClear(Position2D start, Position2D goal) {
+		double rdr = 1.0 / ((VisibilityGraph)this.mapRepresentation).getDiscretizationRatio();
+		return ((VisibilityGraph)this.mapRepresentation).pathIsClear(
+			start.scaled(rdr, rdr), goal.scaled(rdr, rdr)
 		);
 	}
 	
@@ -43,7 +56,8 @@ public abstract class AbstractVGDijkstraPlanner
 	 */
 	@Override
 	protected Position2D getPositionOf(VGNode element) {
-		return element.getPosition();
+		double dr = ((VisibilityGraph)this.mapRepresentation).getDiscretizationRatio();
+		return element.getPosition().scaled(dr, dr);
 	}
 	
 	/**
@@ -60,11 +74,12 @@ public abstract class AbstractVGDijkstraPlanner
 	@Override
 	protected Couple<VGNode, VGNode>prepareGeneration(Position2D start, Position2D goal) {
 		VisibilityGraph vg = (VisibilityGraph)this.mapRepresentation;
+		double rdr = 1.0 / vg.getDiscretizationRatio();
+		
+		VGNode startNode = new VGNode(-2, start.scaled(rdr, rdr));
+		VGNode goalNode  = new VGNode(-1, goal.scaled(rdr, rdr));
+
 		Collection<VGNode> allNodes = this.getTraversalMediumCollection();
-		
-		VGNode startNode = new VGNode(start);
-		VGNode goalNode  = new VGNode(goal);
-		
 		vg.addEdgesFor(startNode, allNodes);
 		vg.addEdgesFor(goalNode,  allNodes);
 		

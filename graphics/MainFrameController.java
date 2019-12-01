@@ -5,8 +5,8 @@ import java.awt.event.KeyListener;
 import java.awt.event.WindowEvent;
 
 import game.MapData;
+import planning.GridAStarPlanner;
 import planning.IPlanning;
-import planning.VGAStarPlanner;
 
 /**
  * The controller class for the MainFrame graphics class. This contains the code for all
@@ -69,15 +69,20 @@ public class MainFrameController implements KeyListener {
 	public void startSession(String dirURL) {
 		this.parent.setSessionRelatedPanels(dirURL);
 		
-		IPlanning.setZombiesPlannerType(VGAStarPlanner.class);
+		IPlanning.setZombiesPlannerType(GridAStarPlanner.class);
 		if (!IPlanning.renewZombiesPlanner(
-				new Class<?>[]{int.class, double.class, MapData.class},
-				4,
-				4.25,
-				this.parent.getSessionPanel().getSession().getMapData()
+				new Class<?>[]{int.class, MapData.class, double.class},
+				12,
+				this.parent.getSessionPanel().getSession().getMapData(),
+				50.0
 		)) {
 			throw new RuntimeException("Failed to set the Zombies path planner.");
 		}
+		
+//		VisibilityGraph vg = new VisibilityGraph(12, 4.25);
+//		vg.build(this.parent.getSessionPanel().getSession().getMapData());
+//		vg.writeImageTo(System.getenv("HOME") + "/Documents/test.png");
+//		System.out.println("Done.");
 		
 		this.parent.addKeyListener(this.parent.getSessionPanel().getSessionPanelController());
 		this.parent.addMouseListener(this.parent.getSessionPanel().getSessionPanelController());

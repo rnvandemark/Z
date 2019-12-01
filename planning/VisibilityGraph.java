@@ -340,6 +340,25 @@ public class VisibilityGraph extends MapRepresentation {
 	}
 	
 	/**
+	 * A helper function to find whether or not a straight-line path between two
+	 * positions is traversable.
+	 * @param start The starting position (x, y coordinate-cell-pair) in the map.
+	 * @param goal The objective position (x, y coordinate-cell-pair) in the map.
+	 * @return Whether or not the straight-line path is clear.
+	 */
+	public boolean pathIsClear(Position2D start, Position2D goal) {
+		return this.discMap.pathIsClear(start, goal).first.booleanValue();
+	}
+	
+	/**
+	 * Getter for the underlying discretized map's discretization ratio.
+	 * @return The discretization ratio used to create the map.
+	 */
+	public int getDiscretizationRatio() {
+		return this.discMap.getDiscretizationRatio();
+	}
+	
+	/**
 	 * A helper function to add edges to the graph for each confirmed clear line
 	 * of sight between vertices.
 	 * @param n The node to find edges for.
@@ -364,9 +383,7 @@ public class VisibilityGraph extends MapRepresentation {
 					// If the path is clear from one node to another, add two
 					// edges between them in the graph, effectively making a
 					// bidirected graph.
-					if (this.discMap.pathIsClear(
-						n.position, o.position, 0.75 * this.discMap.getDiscretizationRatio()
-					).getKey().booleanValue()) {
+					if (this.discMap.pathIsClear(n.position, o.position, 0.75).first) {
 						double distance = n.distanceBetween(o);
 						this.nodeMap.get(n).add(new VGEdge(distance, o));
 						this.nodeMap.get(o).add(new VGEdge(distance, n));
@@ -495,10 +512,11 @@ public class VisibilityGraph extends MapRepresentation {
 		
 		// Go through each cell in the map and search for vertices.
 		Position2D v;
+		int hashID = 0;
 		for (int x = 0; x < this.discMap.getWidth(); x++) {
 			for (int y = 0; y < this.discMap.getHeight(); y++) {
 				if ((v = this.findVertex(x, y, foundNodes)) != null) {
-					foundNodes.add(new VGNode(v));
+					foundNodes.add(new VGNode(++hashID, v));
 				}
 			}
 		}
@@ -574,12 +592,15 @@ public class VisibilityGraph extends MapRepresentation {
 		 */
 		private Position2D position;
 		
+		private int hashID;
+		
 		/**
 		 * The sole constructor.
 		 * Simply takes a position.
 		 * @param position This node's position.
 		 */
-		public VGNode(Position2D position) {
+		public VGNode(int hashID, Position2D position) {
+			this.hashID   = hashID;
 			this.position = position;
 		}
 		
@@ -616,10 +637,20 @@ public class VisibilityGraph extends MapRepresentation {
 		 */
 		@Override
 		public boolean equals(Object obj) {
-			if (obj instanceof VGNode)
-				return this.nearEqualTo(((VGNode)obj).position);
+			if (obj == null)
+				return false;
+			else if (obj instanceof VGNode)
+				if (obj == this)
+					return true;
+				else
+					return this.nearEqualTo(((VGNode)obj).position);
 			else
 				return false;
+		}
+		
+		@Override
+		public int hashCode() {
+			return this.hashID;
 		}
 
 		/**
@@ -627,7 +658,7 @@ public class VisibilityGraph extends MapRepresentation {
 		 */
 		@Override
 		public String toString() {
-			return this.position.toString();
+			return String.format("{%d: %s}", this.hashID, this.position.toString());
 		}
 	}
 	
@@ -674,6 +705,14 @@ public class VisibilityGraph extends MapRepresentation {
 		 */
 		public VGNode getDestination() {
 			return this.destination;
+		}
+		
+		/**
+		 * Override from the {@link java.lang.Object} method.
+		 */
+		@Override
+		public String toString() {
+			return String.format("{%f -> %s}", this.weight, this.destination.toString());
 		}
 	}
 	

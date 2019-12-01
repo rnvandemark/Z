@@ -1,12 +1,12 @@
 package planning;
 
-import java.util.AbstractMap.SimpleEntry;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.Random;
 
 import actors.Position2D;
 import game.MapData;
+import util.Couple;
 
 /**
  * A rapidly-exploring random tree planning implementation. This is a stochastic
@@ -58,7 +58,7 @@ public class RRTPlanner extends Planner {
 	 * other words, not discretized), as well as whether or not to use the best effort builder.
 	 * @param initialMapData The initial map data to use to build the representation.
 	 * @param useBestEffort Whether or not to use the best effort planning.
-	 * @param useBestEffort The threshold used for the salvaging routine.
+	 * @param salvageThreshold The threshold used for the salvaging routine.
 	 */
 	public RRTPlanner(MapData initialMapData, boolean useBestEffort, double salvageThreshold) {
 		super(new DiscretizedMap(1), initialMapData);
@@ -78,7 +78,7 @@ public class RRTPlanner extends Planner {
 		RRTNode startNode = new RRTNode(null, start);
 		RRTNode finalNode = null;
 		
-		if (mapRep.pathIsClear(start, goal).getKey().booleanValue()) {
+		if (mapRep.pathIsClear(start, goal).first) {
 			// The path from the start to goal positions is clear, finished.
 			finalNode = new RRTNode(startNode, goal);
 		} else {
@@ -86,10 +86,10 @@ public class RRTPlanner extends Planner {
 			
 			// Declare a lot of variables that will be used often in the routine.
 			Position2D randomPosition = new Position2D(-1, -1);
-			SimpleEntry<RRTNode, Double> closestPair;
+			Couple<RRTNode, Double> closestPair;
 			RRTNode closestNode, newNode;
 			double closestDistance, closestAngle;
-			SimpleEntry<Boolean, Position2D> interpolationPair;
+			Couple<Boolean, Position2D> interpolationPair;
 			Position2D interpolatedPosition, bestEffortPosition;
 			boolean interpolationValid;
 			
@@ -110,8 +110,8 @@ public class RRTPlanner extends Planner {
 				// Get the node closest to this random point and the angle between those
 				// two points.
 				closestPair     = RRTNode.closestTo(nodes, randomPosition);
-				closestNode     = closestPair.getKey();
-				closestDistance = closestPair.getValue();
+				closestNode     = closestPair.first;
+				closestDistance = closestPair.second;
 				closestAngle    = closestNode.angleBetween(randomPosition);
 				
 				// Get the resulting position to check for a valid path between.
@@ -125,8 +125,8 @@ public class RRTPlanner extends Planner {
 				
 				// Check if the path is clear and the last habitable position.
 				interpolationPair  = mapRep.pathIsClear(closestNode.position, interpolatedPosition);
-				interpolationValid = interpolationPair.getKey().booleanValue();
-				bestEffortPosition = interpolationPair.getValue();
+				interpolationValid = interpolationPair.first;
+				bestEffortPosition = interpolationPair.second;
 				
 				// If the last valid position can be used, add a new node to the tree.
 				if (interpolationValid || (this.useBestEffort && (bestEffortPosition != null))) {
@@ -135,7 +135,7 @@ public class RRTPlanner extends Planner {
 					
 					// If the path between this new node and the goal position is clear,
 					// finish the search by creating the final connection.
-					if (mapRep.pathIsClear(newNode.position, goal).getKey().booleanValue())
+					if (mapRep.pathIsClear(newNode.position, goal).first)
 						finalNode = new RRTNode(newNode, goal);
 				}
 			}
@@ -168,7 +168,7 @@ public class RRTPlanner extends Planner {
 					while (toAdd != null) {
 						if (mapRep.pathIsClear(
 								toAdd.position, lastAddedPosition
-							).getKey().booleanValue()) {
+							).first) {
 							// The path between a node and some other node before its parent
 							// is clear, keep a reference to it to make a shortcut later
 							// (unless an earlier connection is found).
@@ -208,7 +208,7 @@ public class RRTPlanner extends Planner {
 				// there isn't a direct line of sight between the new start and goal positions)
 				// and if the positions are within some predefined threshold.
 				DiscretizedMap mapRep = (DiscretizedMap)this.mapRepresentation;
-				if (!mapRep.pathIsClear(newStart, newGoal).getKey().booleanValue()) {
+				if (!mapRep.pathIsClear(newStart, newGoal).first) {
 					if (newStart.equals(old.getOriginalStart(), this.salvageThreshold)
 							&& newGoal.equals(old.getOriginalGoal(), this.salvageThreshold)) {
 						old.removeLast();
@@ -275,9 +275,8 @@ public class RRTPlanner extends Planner {
 		 * @return An effective tuple of size two, the first value being the the closest
 		 * node, the second one being the distance between the node and the point.
 		 */
-		public static SimpleEntry<RRTNode, Double> closestTo(
-			LinkedList<RRTNode> nodes, Position2D other
-		) {
+		public static Couple<RRTNode, Double> closestTo(
+			LinkedList<RRTNode> nodes, Position2D other) {
 			if (nodes.isEmpty()) {
 				return null;
 			} else {
@@ -297,7 +296,7 @@ public class RRTPlanner extends Planner {
 					}
 				}
 				
-				return new SimpleEntry<RRTNode, Double>(closest, distance);
+				return new Couple<RRTNode, Double>(closest, distance);
 			}
 		}
 		

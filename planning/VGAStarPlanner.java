@@ -1,5 +1,7 @@
 package planning;
 
+import java.util.Collection;
+
 import game.MapData;
 import planning.VisibilityGraph.VGNode;
 
@@ -27,16 +29,23 @@ public final class VGAStarPlanner extends AbstractVGDijkstraPlanner {
 	public VGAStarPlanner(
 			int discretizationRatio,
 			double cleanlinessThreshold,
-			MapData initialMapData) {
-		super(discretizationRatio, cleanlinessThreshold, initialMapData);
+			MapData initialMapData,
+			double salvageThreshold) {
+		super(
+			discretizationRatio,
+			cleanlinessThreshold,
+			initialMapData,
+			salvageThreshold
+		);
 	}
 	
 	/**
 	 * Override from the {@link planning.AbstractDijkstraPlanner} method.
 	 */
 	@Override
-	protected boolean setInitialDistances(VGNode start, VGNode goal) {
-		for (VGNode e : this.getTraversalMediumCollection()) {
+	protected boolean setInitialDistances(
+			VGNode start, VGNode goal, Collection<VGNode> elements) {
+		for (VGNode e : elements) {
 			this.elementMap.setTentativeDistanceFor(
 				e,
 				e.equals(start) ? 0.0 : Double.POSITIVE_INFINITY
