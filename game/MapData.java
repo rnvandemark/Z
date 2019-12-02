@@ -1,6 +1,7 @@
 package game;
 
 import java.awt.Color;
+import java.awt.Graphics2D;
 import java.awt.image.BufferedImage;
 import java.io.BufferedReader;
 import java.io.File;
@@ -11,6 +12,7 @@ import java.util.Random;
 
 import javax.imageio.ImageIO;
 
+import actors.Actor;
 import actors.Position2D;
 
 /**
@@ -36,9 +38,16 @@ public class MapData {
 	public final static int DISCRETIZATION_GRID_SIZE = 3;
 	
 	/**
-	 * The RGB pixel data for the image of the map.
+	 * The RGB pixel data for the image of the map that is rendered to the screen.
 	 */
-	private BufferedImage image;
+	private BufferedImage displayedImage;
+	
+	/**
+	 * The RGB pixel data for the image of the map that is inflated to account for actor
+	 * dimensionality, so path planning does not produce impossible paths and movement does not
+	 * allow any actor to traverse an occupied cell/pixel.
+	 */
+	private BufferedImage inflatedImage;
 	
 	/**
 	 * The spawn point for the player, when the session using this map starts.
@@ -68,11 +77,12 @@ public class MapData {
 	 * @param dirURL The map's directory name.
 	 */
 	public MapData(String dirURL) {
-		this.image         = null;
-		this.playerSpawn   = new Position2D(-1, -1);
-		this.zombieSpawns  = new ArrayList<Position2D>();
-		this.robotStations = new ArrayList<Position2D>();
-		this.random        = new Random();
+		this.displayedImage = null;
+		this.inflatedImage  = null;
+		this.playerSpawn    = new Position2D(-1, -1);
+		this.zombieSpawns   = new ArrayList<Position2D>();
+		this.robotStations  = new ArrayList<Position2D>();
+		this.random         = new Random();
 		
 		try {
 			BufferedImage originalImage = ImageIO.read(
@@ -89,19 +99,38 @@ public class MapData {
 
 			int whiteRGB = Color.WHITE.getRGB();
 			int blackRGB = Color.BLACK.getRGB();
-			this.image = new BufferedImage(MAP_WIDTH, MAP_HEIGHT, BufferedImage.TYPE_INT_ARGB);
-			for (int x = 0; x < MAP_WIDTH; x++) {
-				for (int y = 0; y < MAP_HEIGHT; y++) {
-					if (originalImage.getRGB(x, y) == whiteRGB) {
-						this.image.setRGB(x, y, whiteRGB);
-					} else {
-						this.image.setRGB(x, y, blackRGB);
-					}
-				}
-			}
+			this.displayedImage = new BufferedImage(MAP_WIDTH, MAP_HEIGHT, BufferedImage.TYPE_INT_ARGB);
+			for (int x = 0; x < MAP_WIDTH; x++)
+				for (int y = 0; y < MAP_HEIGHT; y++)
+					this.displayedImage.setRGB(
+						x,
+						y,
+						originalImage.getRGB(x, y) == whiteRGB ? whiteRGB : blackRGB
+					);
+			
+			this.inflatedImage = new BufferedImage(
+				this.displayedImage.getWidth(),
+				this.displayedImage.getHeight(),
+				this.displayedImage.getType()
+			);
+			
+			Graphics2D g2D = this.inflatedImage.createGraphics();
+			g2D.setColor(Color.WHITE);
+			g2D.fillRect(0, 0, this.inflatedImage.getWidth(), this.inflatedImage.getHeight());
+
+			g2D.setColor(Color.BLACK);
+			for (int x = 0; x < this.displayedImage.getWidth(); x++)
+				for (int y = 0; y < this.displayedImage.getHeight(); y++)
+					if (this.displayedImage.getRGB(x, y) == blackRGB)
+						g2D.fillOval(
+							x - Actor.RADIUS, y - Actor.RADIUS,
+							Actor.RADIUS * 2, Actor.RADIUS * 2
+						);
+			
+			g2D.dispose();
 			
 			BufferedReader reader = new BufferedReader(new FileReader(new File(
-					MapData.class.getResource("resources/maps/" + dirURL + "/data.txt").getPath()
+				MapData.class.getResource("resources/maps/" + dirURL + "/data.txt").getPath()
 			)));
 			
 			String line;
@@ -140,7 +169,7 @@ public class MapData {
 	 * @return Whether or not the position is valid.
 	 */
 	public boolean positionIsValid(Position2D position) {
-		return this.image.getRGB((int)position.x, (int)position.y) == Color.WHITE.getRGB();
+		return this.inflatedImage.getRGB((int)position.x, (int)position.y) == Color.WHITE.getRGB();
 	}
 	
 	/**
@@ -156,11 +185,19 @@ public class MapData {
 	}
 	
 	/**
-	 * Getter for the map image.
-	 * @return The map image.
+	 * Getter for the image of the map that is to be rendered onto the screen.
+	 * @return The rendered map image.
 	 */
-	public BufferedImage getImage() {
-		return this.image;
+	public BufferedImage getDisplayedImage() {
+		return this.displayedImage;
+	}
+	
+	/**
+	 * Getter for the image of the map that is representative of a traversable environment.
+	 * @return The traversable map image.
+	 */
+	public BufferedImage getInflatedImage() {
+		return this.inflatedImage;
 	}
 	
 	/**

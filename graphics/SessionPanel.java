@@ -211,7 +211,7 @@ public class SessionPanel extends ChildPanel {
 		super.paintComponent(g);
 		
 		Graphics2D g2d = (Graphics2D)g.create();
-		g2d.drawImage(this.session.getMapData().getImage(), 0, 0, null);
+		g2d.drawImage(this.session.getMapData().getDisplayedImage(), 0, 0, null);
 		this.captureActorData();
 		this.drawActorData(g2d);
 	}

@@ -277,10 +277,11 @@ public class DiscretizedMap extends MapRepresentation {
 	 */
 	@Override
 	public boolean build(MapData mapData) {
-		BufferedImage initialImage = mapData.getImage();
+		BufferedImage initialImage = mapData.getInflatedImage();
+		
 		int dr = this.discretizationRatio;
-		int cw = (int)Math.ceil(initialImage.getWidth()  / (double)dr);
-		int ch = (int)Math.ceil(initialImage.getHeight() / (double)dr);
+		int cw = (int)Math.floor(initialImage.getWidth()  / (double)dr);
+		int ch = (int)Math.floor(initialImage.getHeight() / (double)dr);
 		this.cells = new boolean[cw][ch];
 		
 		int blackRGB = Color.BLACK.getRGB();
@@ -288,8 +289,8 @@ public class DiscretizedMap extends MapRepresentation {
 			for (int y = 0; y < ch; y++) {
 				boolean occupied = false;
 				
-				for (int i = 0; (i < this.discretizationRatio) && (!occupied); i++)
-					for (int j = 0; (j < this.discretizationRatio) && (!occupied); j++)
+				for (int i = 0; (i < dr) && (!occupied); i++)
+					for (int j = 0; (j < dr) && (!occupied); j++)
 						occupied = initialImage.getRGB((x * dr) + i, (y * dr) + j) == blackRGB;
 				
 				this.cells[x][y] = occupied;
