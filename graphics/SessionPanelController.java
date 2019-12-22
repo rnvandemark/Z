@@ -70,7 +70,7 @@ public class SessionPanelController
 		
 		this.keepThreadsAlive      = new AtomicBoolean();
 		this.graphicsUpdateThread  = new Thread(new GraphicsRunnable(this));
-		this.zombiesPathPlanThread = new Thread(new ZombiePathPlanningRunnable(this));
+		this.zombiesPathPlanThread = new Thread(new ZombieHandlerRunnable(this));
 		
 		this.keysPressed = new ConcurrentHashMap<UserControl, Boolean>();
 	}
@@ -329,9 +329,9 @@ public class SessionPanelController
 	/**
 	 * A simple class made to organize functionality, so a large chunk of code wasn't
 	 * intrusive. This class implements the Runnable interface and is meant to handle
-	 * (re)generating a session's active zombies' path.
+	 * (re)generating a session's active zombies' path and spawning them when necessary.
 	 */
-	private static class ZombiePathPlanningRunnable implements Runnable {
+	private static class ZombieHandlerRunnable implements Runnable {
 		
 		/**
 		 * The controller that is using this instance for its graphics.
@@ -343,7 +343,7 @@ public class SessionPanelController
 		 * Simply take and save a reference to the controller that owns this instance.
 		 * @param controller
 		 */
-		public ZombiePathPlanningRunnable(SessionPanelController controller) {
+		public ZombieHandlerRunnable(SessionPanelController controller) {
 			this.controller = controller;
 		}
 		
@@ -374,12 +374,14 @@ public class SessionPanelController
 				
 				session.acquireActorLock();
 				try {
+					while (currentWave.canSpawnZombie())
+						currentWave.spawnZombie(session.getMapData().getRandomZombieSpawnPoint());
+					
 					goal = session.getPlayer().getPosition();
 					for (int i = 0; i < Wave.MAX_ZOMBIES_AT_ONCE; i++) {
 						z = currentWave.getZombieAt(i);
-						p = currentWave.getZombiePathAt(i);
 						currentPositions[i]  = z == null ? null : z.getPosition();
-						currentPaths[i]      = p;
+						currentPaths[i]      = currentWave.getZombiePathAt(i);
 						recalculatedPaths[i] = false;
 					}
 					setValues = true;

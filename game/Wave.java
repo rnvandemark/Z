@@ -68,7 +68,7 @@ public class Wave {
 	public Wave(int waveNumber) {
 		this.waveNumber        = waveNumber;
 		this.zombieHealth      = this.waveNumber * 125;
-		this.zombieSpawnsLeft  = (int)(5 * Math.pow(1.2, this.waveNumber));
+		this.zombieSpawnsLeft  = (int)Math.round(5 * Math.pow(1.2, this.waveNumber));
 		this.activeZombies     = new Zombie[MAX_ZOMBIES_AT_ONCE];
 		this.activeZombiePaths = new PlannedPath[MAX_ZOMBIES_AT_ONCE];
 		this.random            = new Random();
@@ -196,18 +196,28 @@ public class Wave {
 	}
 	
 	/**
+	 * Helper function to decide if a zombie can be spawned at the moment or not.
+	 * @return Whether or not a zombie can be spawned at this mom
+	 */
+	public boolean canSpawnZombie() {
+		if (!this.isDoneSpawning())
+			for (int i = 0; i < MAX_ZOMBIES_AT_ONCE; i++)
+				if (this.activeZombies[i] != null)
+					return true;
+		
+		return false;
+	}
+	
+	/**
 	 * Helper function to decide if if this wave is finished, meaning that no more zombies are to
 	 * spawn, and there are no zombies active at the moment either.
 	 * @return Whether or not the wave is treated as finished.
 	 */
 	public boolean isFinished() {
-		if (this.isDoneSpawning()) {
-			for (int i = 0; i < MAX_ZOMBIES_AT_ONCE; i++) {
-				if (this.activeZombies[i] != null) {
+		if (this.isDoneSpawning())
+			for (int i = 0; i < MAX_ZOMBIES_AT_ONCE; i++)
+				if (this.activeZombies[i] != null)
 					return false;
-				}
-			}
-		}
 		
 		return false;
 	}

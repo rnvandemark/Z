@@ -57,6 +57,14 @@ public class Session {
 		this.actorsMutex           = new ReentrantLock(true);
 	}
 	
+	public void acquireAllResources() {
+		this.acquireActorLock();
+	}
+	
+	public boolean releaseAllResources() {
+		return this.releaseActorLock();
+	}
+	
 	/**
 	 * Queue this thread to hold the actor locking mechanism, blocking until the execution
 	 * thread has the hold.
@@ -144,6 +152,8 @@ public class Session {
 	 * wave number. This also informs the wave change listeners of the appropriate event.
 	 */
 	public void startNextWave() {
+		this.acquireAllResources();
+		
 		this.currentWave = new Wave(
 			this.currentWave == null ? 1 : this.currentWave.getWaveNumber() + 1
 		);
@@ -151,6 +161,9 @@ public class Session {
 		WaveChangeEvent e = new WaveChangeEvent(this.currentWave.getWaveNumber());
 		for (WaveChangeListener l : this.waveChangeListeners)
 			l.waveNumberChanged(e);
+		
+		if (!this.releaseAllResources())
+			throw new RuntimeException("Unorganized thread ownership.");
 	}
 	
 	/**
